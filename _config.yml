@@ -1,19 +1,22 @@
-# Hexo Configuration
+# Hexo 配置
 ## Docs: https://hexo.io/docs/configuration.html
 ## Source: https://github.com/hexojs/hexo/
 
-# Site
+# 主页设置
 title: Vinho的私人笔记
 subtitle: ''
 description: ''
 keywords:
 author: VinhoJiang
+# 网站语言
 language: zh-CN
+# 时区
 timezone: 'Asia/Shanghai'
 
 # URL
-## If your site is put in a subdirectory, set url as 'http://example.com/child' and root as '/child/'
+## 如果您的网站位于子目录中，则将url设置为 "http://example.com/child" ，将根目录设置为 "/child/"
 url: https://woharen.github.io/hexo
+## 根目录 /hexo/
 root: /hexo/
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -31,13 +34,13 @@ code_dir: downloads/code
 i18n_dir: :lang
 skip_render:
 
-# Writing
+# 写作
 new_post_name: :title.md # File name of new posts
 default_layout: post
-titlecase: false # Transform title into titlecase
+titlecase: false # 将标题转换为标题
 external_link:
-  enable: true # Open external links in new tab
-  field: site # Apply to the whole site
+  enable: false # 是否在新标签页中打开外部链接
+  field: site # site： 应用于整个网站
   exclude: ''
 filename_case: 0
 render_drafts: false
@@ -57,16 +60,16 @@ prismjs:
   line_number: true
   tab_replace: ''
 
-# Home page setting
-# path: Root path for your blogs index page. (default = '')
-# per_page: Posts displayed per page. (0 = disable pagination)
-# order_by: Posts order. (Order by date descending by default)
+# 主页设置
+# path：您的博客索引页面的根路径。 （默认=''）
+# per_page：每页显示的帖子。 （0 =禁用分页）
+# order_by：发布订单。 （按日期顺序默认降序排列）
 index_generator:
   path: ''
   per_page: 10
   order_by: -date
 
-# Category & Tag
+# 分类和标签
 default_category: uncategorized
 category_map:
 tag_map:
@@ -104,3 +107,22 @@ theme: yilia-plus
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: ''
+
+jsonContent:
+    meta: false
+    pages: false
+    posts:
+      title: true
+      date: true
+      path: true
+      text: false
+      raw: false
+      content: false
+      slug: false
+      updated: false
+      comments: false
+      link: false
+      permalink: false
+      excerpt: false
+      categories: false
+      tags: true
