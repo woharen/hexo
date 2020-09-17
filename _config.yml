@@ -17,7 +17,7 @@ timezone: 'Asia/Shanghai'
 ## 如果您的网站位于子目录中，则将url设置为 "http://example.com/child" ，将根目录设置为 "/child/"
 url: https://meihao1104.com
 ## 根目录 /
-root: /hexo/
+root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
 pretty_urls:
