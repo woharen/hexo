@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>Vinho的私人笔记</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="java通过Sigar获取服务器信息## 介绍今天在开发过程中遇到个问题，怎么在JAVA中获取到服务器信息?经过寻找，终于找到了，那就是Sigar,那么什么是Sigar呢？  SigarSigar是Hyperic-hq产品的基础包,是HypericHQ主要的数据收集组件。它用来从许多平台收集系统和处理信息.这些平台包括：Linux,Windows, Solaris, AIX, HP-UX, Fre">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vinho的私人笔记">
+<meta property="og:url" content="https://meihao1104.com/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/index.html">
+<meta property="og:site_name" content="Vinho的私人笔记">
+<meta property="og:description" content="java通过Sigar获取服务器信息## 介绍今天在开发过程中遇到个问题，怎么在JAVA中获取到服务器信息?经过寻找，终于找到了，那就是Sigar,那么什么是Sigar呢？  SigarSigar是Hyperic-hq产品的基础包,是HypericHQ主要的数据收集组件。它用来从许多平台收集系统和处理信息.这些平台包括：Linux,Windows, Solaris, AIX, HP-UX, Fre">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:modified_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:author" content="VinhoJiang">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Vinho的私人笔记" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Vinho的私人笔记</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://meihao1104.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-java通过Sigar获取服务器信息" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="java通过Sigar获取服务器信息-介绍"><a href="#java通过Sigar获取服务器信息-介绍" class="headerlink" title="java通过Sigar获取服务器信息## 介绍"></a>java通过Sigar获取服务器信息## 介绍</h2><p>今天在开发过程中遇到个问题，怎么在JAVA中获取到服务器信息?<br>经过寻找，终于找到了，那就是<code>Sigar</code>,那么什么是<code>Sigar</code>呢？</p>
+<blockquote>
+<p>Sigar<br>Sigar是Hyperic-hq产品的基础包,是HypericHQ主要的数据收集组件。它用来从许多平台收集系统和处理信息.<br>这些平台包括：Linux,Windows, Solaris, AIX, HP-UX, FreeBSD and Mac OSX.<br>Sigar有C，C#，Java和PerlAPI，java版的API为sigar.jarsigar.jar的底层是用C语言编写的，它通过本地方法来调用操作系统API来获取系统相关数据。<br>Windows操作系统下Sigar.jar依赖sigar-amd64-winnt.dll或sigar-x86-winnt.dll，linux操作系统下则依赖libsigar-amd64-linux.so或libsigar-x86-linux.so</p>
+</blockquote>
+<p>能获取的信息有：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">CPU信息：包括基本信息（vendor、model、mhz、cacheSize）和统计信息（user、sys、idle、nice、wait）</span><br><span class="line">文件系统信息：包括Filesystem、Size、Used、Avail、Use%、Type</span><br><span class="line">事件信息：类似Service Control Manager</span><br><span class="line">内存信息：物理内存和交换内存的总数、使用数、剩余数；RAM的大小</span><br><span class="line">网络信息：包括网络接口信息和网络路由信息</span><br><span class="line">进程信息：包括每个进程的内存、CPU占用数、状态、参数、句柄</span><br><span class="line">IO信息：包括IO的状态，读写大小等</span><br><span class="line">服务状态信息</span><br><span class="line">系统信息：包括操作系统版本，系统资源限制情况，系统运行时间以及负载，JAVA的版本信息等</span><br></pre></td></tr></table></figure>
+
+<p><a href="http://www.hyperic.com/">Hyperic-hq官方网站</a></p>
+<p><a href="http://sigar.hyperic.com/">官网Sigar.jar下载地址</a></p>
+<p><a href="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/hyperic-sigar-1.6.4_1575944915413.zip">本站下载（推荐）</a></p>
+<h2 id="依赖"><a href="#依赖" class="headerlink" title="依赖"></a>依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;org.hyperic&lt;&#x2F;groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;sigar&lt;&#x2F;artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.6.4&lt;&#x2F;version&gt;</span><br><span class="line">&lt;&#x2F;dependency&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="注意！！！！"><a href="#注意！！！！" class="headerlink" title="注意！！！！"></a>注意！！！！</h2><p>需要将基本库文件放到jdk的bin目录下，不放运行会抛异常。</p>
+<p>linux查看jdk目录</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmd -- java -verbose</span><br></pre></td></tr></table></figure>
+
+<p>比如在<strong>windows环境下</strong>是以下文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sigar-amd64-winnt.dll</span><br><span class="line">sigar-x86-winnt.dll</span><br><span class="line">sigar-x86-winnt.lib</span><br></pre></td></tr></table></figure>
+
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br></pre></td><td class="code"><pre><span class="line">package com.meihao1104.rainbow.utils;</span><br><span class="line"></span><br><span class="line">import java.net.InetAddress;</span><br><span class="line">import java.net.UnknownHostException;</span><br><span class="line">import java.util.Map;</span><br><span class="line">import java.util.Properties;</span><br><span class="line">import org.hyperic.sigar.CpuInfo;</span><br><span class="line">import org.hyperic.sigar.CpuPerc;</span><br><span class="line">import org.hyperic.sigar.FileSystem;</span><br><span class="line">import org.hyperic.sigar.FileSystemUsage;</span><br><span class="line">import org.hyperic.sigar.Mem;</span><br><span class="line">import org.hyperic.sigar.NetFlags;</span><br><span class="line">import org.hyperic.sigar.NetInterfaceConfig;</span><br><span class="line">import org.hyperic.sigar.NetInterfaceStat;</span><br><span class="line">import org.hyperic.sigar.OperatingSystem;</span><br><span class="line">import org.hyperic.sigar.Sigar;</span><br><span class="line">import org.hyperic.sigar.SigarException;</span><br><span class="line">import org.hyperic.sigar.Swap;</span><br><span class="line">import org.hyperic.sigar.Who;</span><br><span class="line"> </span><br><span class="line">public class RuntimeTest &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            &#x2F;&#x2F; System信息，从jvm获取</span><br><span class="line">            property();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; cpu信息</span><br><span class="line">            cpu();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 内存信息</span><br><span class="line">            memory();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 操作系统信息</span><br><span class="line">            os();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 用户信息</span><br><span class="line">            who();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 文件系统信息</span><br><span class="line">            file();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 网络信息</span><br><span class="line">            net();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 以太网信息</span><br><span class="line">            ethernet();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">        &#125; catch (Exception e1) &#123;</span><br><span class="line">            e1.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void property() throws UnknownHostException &#123;</span><br><span class="line">        Runtime r &#x3D; Runtime.getRuntime();</span><br><span class="line">        Properties props &#x3D; System.getProperties();</span><br><span class="line">        InetAddress addr;</span><br><span class="line">        addr &#x3D; InetAddress.getLocalHost();</span><br><span class="line">        String ip &#x3D; addr.getHostAddress();</span><br><span class="line">        Map&lt;String, String&gt; map &#x3D; System.getenv();</span><br><span class="line">        String userName &#x3D; map.get(&quot;USERNAME&quot;);&#x2F;&#x2F; 获取用户名</span><br><span class="line">        String computerName &#x3D; map.get(&quot;COMPUTERNAME&quot;);&#x2F;&#x2F; 获取计算机名</span><br><span class="line">        String userDomain &#x3D; map.get(&quot;USERDOMAIN&quot;);&#x2F;&#x2F; 获取计算机域名</span><br><span class="line">        System.out.println(&quot;用户名:    &quot; + userName);</span><br><span class="line">        System.out.println(&quot;计算机名:    &quot; + computerName);</span><br><span class="line">        System.out.println(&quot;计算机域名:    &quot; + userDomain);</span><br><span class="line">        System.out.println(&quot;本地ip地址:    &quot; + ip);</span><br><span class="line">        System.out.println(&quot;本地主机名:    &quot; + addr.getHostName());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的总内存:    &quot; + r.totalMemory());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的剩余内存:    &quot; + r.freeMemory());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的处理器个数:    &quot; + r.availableProcessors());</span><br><span class="line">        System.out.println(&quot;Java的运行环境版本：    &quot; + props.getProperty(&quot;java.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的运行环境供应商：    &quot; + props.getProperty(&quot;java.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java供应商的URL：    &quot; + props.getProperty(&quot;java.vendor.url&quot;));</span><br><span class="line">        System.out.println(&quot;Java的安装路径：    &quot; + props.getProperty(&quot;java.home&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范版本：    &quot; + props.getProperty(&quot;java.vm.specification.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范供应商：    &quot; + props.getProperty(&quot;java.vm.specification.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范名称：    &quot; + props.getProperty(&quot;java.vm.specification.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现版本：    &quot; + props.getProperty(&quot;java.vm.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现供应商：    &quot; + props.getProperty(&quot;java.vm.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现名称：    &quot; + props.getProperty(&quot;java.vm.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范版本：    &quot; + props.getProperty(&quot;java.specification.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范供应商：    &quot; + props.getProperty(&quot;java.specification.vender&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范名称：    &quot; + props.getProperty(&quot;java.specification.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java的类格式版本号：    &quot; + props.getProperty(&quot;java.class.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的类路径：    &quot; + props.getProperty(&quot;java.class.path&quot;));</span><br><span class="line">        System.out.println(&quot;加载库时搜索的路径列表：    &quot; + props.getProperty(&quot;java.library.path&quot;));</span><br><span class="line">        System.out.println(&quot;默认的临时文件路径：    &quot; + props.getProperty(&quot;java.io.tmpdir&quot;));</span><br><span class="line">        System.out.println(&quot;一个或多个扩展目录的路径：    &quot; + props.getProperty(&quot;java.ext.dirs&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的名称：    &quot; + props.getProperty(&quot;os.name&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的构架：    &quot; + props.getProperty(&quot;os.arch&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的版本：    &quot; + props.getProperty(&quot;os.version&quot;));</span><br><span class="line">        System.out.println(&quot;文件分隔符：    &quot; + props.getProperty(&quot;file.separator&quot;));</span><br><span class="line">        System.out.println(&quot;路径分隔符：    &quot; + props.getProperty(&quot;path.separator&quot;));</span><br><span class="line">        System.out.println(&quot;行分隔符：    &quot; + props.getProperty(&quot;line.separator&quot;));</span><br><span class="line">        System.out.println(&quot;用户的账户名称：    &quot; + props.getProperty(&quot;user.name&quot;));</span><br><span class="line">        System.out.println(&quot;用户的主目录：    &quot; + props.getProperty(&quot;user.home&quot;));</span><br><span class="line">        System.out.println(&quot;用户的当前工作目录：    &quot; + props.getProperty(&quot;user.dir&quot;));</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void memory() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        Mem mem &#x3D; sigar.getMem();</span><br><span class="line">        &#x2F;&#x2F; 内存总量</span><br><span class="line">        System.out.println(&quot;内存总量:    &quot; + mem.getTotal() &#x2F; 1024L + &quot;K av&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前内存使用量</span><br><span class="line">        System.out.println(&quot;当前内存使用量:    &quot; + mem.getUsed() &#x2F; 1024L + &quot;K used&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前内存剩余量</span><br><span class="line">        System.out.println(&quot;当前内存剩余量:    &quot; + mem.getFree() &#x2F; 1024L + &quot;K free&quot;);</span><br><span class="line">        Swap swap &#x3D; sigar.getSwap();</span><br><span class="line">        &#x2F;&#x2F; 交换区总量</span><br><span class="line">        System.out.println(&quot;交换区总量:    &quot; + swap.getTotal() &#x2F; 1024L + &quot;K av&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前交换区使用量</span><br><span class="line">        System.out.println(&quot;当前交换区使用量:    &quot; + swap.getUsed() &#x2F; 1024L + &quot;K used&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前交换区剩余量</span><br><span class="line">        System.out.println(&quot;当前交换区剩余量:    &quot; + swap.getFree() &#x2F; 1024L + &quot;K free&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void cpu() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        CpuInfo infos[] &#x3D; sigar.getCpuInfoList();</span><br><span class="line">        CpuPerc cpuList[] &#x3D; null;</span><br><span class="line">        cpuList &#x3D; sigar.getCpuPercList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; infos.length; i++) &#123;&#x2F;&#x2F; 不管是单块CPU还是多CPU都适用</span><br><span class="line">            CpuInfo info &#x3D; infos[i];</span><br><span class="line">            System.out.println(&quot;第&quot; + (i + 1) + &quot;块CPU信息&quot;);</span><br><span class="line">            System.out.println(&quot;CPU的总量MHz:    &quot; + info.getMhz());&#x2F;&#x2F; CPU的总量MHz</span><br><span class="line">            System.out.println(&quot;CPU生产商:    &quot; + info.getVendor());&#x2F;&#x2F; 获得CPU的卖主，如：Intel</span><br><span class="line">            System.out.println(&quot;CPU类别:    &quot; + info.getModel());&#x2F;&#x2F; 获得CPU的类别，如：Celeron</span><br><span class="line">            System.out.println(&quot;CPU缓存数量:    &quot; + info.getCacheSize());&#x2F;&#x2F; 缓冲存储器数量</span><br><span class="line">            printCpuPerc(cpuList[i]);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void printCpuPerc(CpuPerc cpu) &#123;</span><br><span class="line">        System.out.println(&quot;CPU用户使用率:    &quot; + CpuPerc.format(cpu.getUser()));&#x2F;&#x2F; 用户使用率</span><br><span class="line">        System.out.println(&quot;CPU系统使用率:    &quot; + CpuPerc.format(cpu.getSys()));&#x2F;&#x2F; 系统使用率</span><br><span class="line">        System.out.println(&quot;CPU当前等待率:    &quot; + CpuPerc.format(cpu.getWait()));&#x2F;&#x2F; 当前等待率</span><br><span class="line">        System.out.println(&quot;CPU当前错误率:    &quot; + CpuPerc.format(cpu.getNice()));&#x2F;&#x2F;</span><br><span class="line">        System.out.println(&quot;CPU当前空闲率:    &quot; + CpuPerc.format(cpu.getIdle()));&#x2F;&#x2F; 当前空闲率</span><br><span class="line">        System.out.println(&quot;CPU总的使用率:    &quot; + CpuPerc.format(cpu.getCombined()));&#x2F;&#x2F; 总的使用率</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void os() &#123;</span><br><span class="line">        OperatingSystem OS &#x3D; OperatingSystem.getInstance();</span><br><span class="line">        &#x2F;&#x2F; 操作系统内核类型如： 386、486、586等x86</span><br><span class="line">        System.out.println(&quot;操作系统:    &quot; + OS.getArch());</span><br><span class="line">        System.out.println(&quot;操作系统CpuEndian():    &quot; + OS.getCpuEndian());&#x2F;&#x2F;</span><br><span class="line">        System.out.println(&quot;操作系统DataModel():    &quot; + OS.getDataModel());&#x2F;&#x2F;</span><br><span class="line">        &#x2F;&#x2F; 系统描述</span><br><span class="line">        System.out.println(&quot;操作系统的描述:    &quot; + OS.getDescription());</span><br><span class="line">        &#x2F;&#x2F; 操作系统类型</span><br><span class="line">        &#x2F;&#x2F; System.out.println(&quot;OS.getName():    &quot; + OS.getName());</span><br><span class="line">        &#x2F;&#x2F; System.out.println(&quot;OS.getPatchLevel():    &quot; + OS.getPatchLevel());&#x2F;&#x2F;</span><br><span class="line">        &#x2F;&#x2F; 操作系统的卖主</span><br><span class="line">        System.out.println(&quot;操作系统的卖主:    &quot; + OS.getVendor());</span><br><span class="line">        &#x2F;&#x2F; 卖主名称</span><br><span class="line">        System.out.println(&quot;操作系统的卖主名:    &quot; + OS.getVendorCodeName());</span><br><span class="line">        &#x2F;&#x2F; 操作系统名称</span><br><span class="line">        System.out.println(&quot;操作系统名称:    &quot; + OS.getVendorName());</span><br><span class="line">        &#x2F;&#x2F; 操作系统卖主类型</span><br><span class="line">        System.out.println(&quot;操作系统卖主类型:    &quot; + OS.getVendorVersion());</span><br><span class="line">        &#x2F;&#x2F; 操作系统的版本号</span><br><span class="line">        System.out.println(&quot;操作系统的版本号:    &quot; + OS.getVersion());</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void who() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        Who who[] &#x3D; sigar.getWhoList();</span><br><span class="line">        if (who !&#x3D; null &amp;&amp; who.length &gt; 0) &#123;</span><br><span class="line">            for (int i &#x3D; 0; i &lt; who.length; i++) &#123;</span><br><span class="line">                &#x2F;&#x2F; System.out.println(&quot;当前系统进程表中的用户名&quot; + String.valueOf(i));</span><br><span class="line">                Who _who &#x3D; who[i];</span><br><span class="line">                System.out.println(&quot;用户控制台:    &quot; + _who.getDevice());</span><br><span class="line">                System.out.println(&quot;用户host:    &quot; + _who.getHost());</span><br><span class="line">                &#x2F;&#x2F; System.out.println(&quot;getTime():    &quot; + _who.getTime());</span><br><span class="line">                &#x2F;&#x2F; 当前系统进程表中的用户名</span><br><span class="line">                System.out.println(&quot;当前系统进程表中的用户名:    &quot; + _who.getUser());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void file() throws Exception &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        FileSystem fslist[] &#x3D; sigar.getFileSystemList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; fslist.length; i++) &#123;</span><br><span class="line">            System.out.println(&quot;分区的盘符名称&quot; + i);</span><br><span class="line">            FileSystem fs &#x3D; fslist[i];</span><br><span class="line">            &#x2F;&#x2F; 分区的盘符名称</span><br><span class="line">            System.out.println(&quot;盘符名称:    &quot; + fs.getDevName());</span><br><span class="line">            &#x2F;&#x2F; 分区的盘符名称</span><br><span class="line">            System.out.println(&quot;盘符路径:    &quot; + fs.getDirName());</span><br><span class="line">            System.out.println(&quot;盘符标志:    &quot; + fs.getFlags());&#x2F;&#x2F;</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型，比如 FAT32、NTFS</span><br><span class="line">            System.out.println(&quot;盘符类型:    &quot; + fs.getSysTypeName());</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型名，比如本地硬盘、光驱、网络文件系统等</span><br><span class="line">            System.out.println(&quot;盘符类型名:    &quot; + fs.getTypeName());</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型</span><br><span class="line">            System.out.println(&quot;盘符文件系统类型:    &quot; + fs.getType());</span><br><span class="line">            FileSystemUsage usage &#x3D; null;</span><br><span class="line">            usage &#x3D; sigar.getFileSystemUsage(fs.getDirName());</span><br><span class="line">            switch (fs.getType()) &#123;</span><br><span class="line">            case 0: &#x2F;&#x2F; TYPE_UNKNOWN ：未知</span><br><span class="line">                break;</span><br><span class="line">            case 1: &#x2F;&#x2F; TYPE_NONE</span><br><span class="line">                break;</span><br><span class="line">            case 2: &#x2F;&#x2F; TYPE_LOCAL_DISK : 本地硬盘</span><br><span class="line">                &#x2F;&#x2F; 文件系统总大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;总大小:    &quot; + usage.getTotal() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统剩余大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;剩余大小:    &quot; + usage.getFree() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统可用大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;可用大小:    &quot; + usage.getAvail() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统已经使用量</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;已经使用量:    &quot; + usage.getUsed() + &quot;KB&quot;);</span><br><span class="line">                double usePercent &#x3D; usage.getUsePercent() * 100D;</span><br><span class="line">                &#x2F;&#x2F; 文件系统资源的利用率</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;资源的利用率:    &quot; + usePercent + &quot;%&quot;);</span><br><span class="line">                break;</span><br><span class="line">            case 3:&#x2F;&#x2F; TYPE_NETWORK ：网络</span><br><span class="line">                break;</span><br><span class="line">            case 4:&#x2F;&#x2F; TYPE_RAM_DISK ：闪存</span><br><span class="line">                break;</span><br><span class="line">            case 5:&#x2F;&#x2F; TYPE_CDROM ：光驱</span><br><span class="line">                break;</span><br><span class="line">            case 6:&#x2F;&#x2F; TYPE_SWAP ：页面交换</span><br><span class="line">                break;</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(fs.getDevName() + &quot;读出：    &quot; + usage.getDiskReads());</span><br><span class="line">            System.out.println(fs.getDevName() + &quot;写入：    &quot; + usage.getDiskWrites());</span><br><span class="line">        &#125;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void net() throws Exception &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        String ifNames[] &#x3D; sigar.getNetInterfaceList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; ifNames.length; i++) &#123;</span><br><span class="line">            String name &#x3D; ifNames[i];</span><br><span class="line">            NetInterfaceConfig ifconfig &#x3D; sigar.getNetInterfaceConfig(name);</span><br><span class="line">            System.out.println(&quot;网络设备名:    &quot; + name);&#x2F;&#x2F; 网络设备名</span><br><span class="line">            System.out.println(&quot;IP地址:    &quot; + ifconfig.getAddress());&#x2F;&#x2F; IP地址</span><br><span class="line">            System.out.println(&quot;子网掩码:    &quot; + ifconfig.getNetmask());&#x2F;&#x2F; 子网掩码</span><br><span class="line">            if ((ifconfig.getFlags() &amp; 1L) &lt;&#x3D; 0L) &#123;</span><br><span class="line">                System.out.println(&quot;!IFF_UP...skipping getNetInterfaceStat&quot;);</span><br><span class="line">                continue;</span><br><span class="line">            &#125;</span><br><span class="line">            NetInterfaceStat ifstat &#x3D; sigar.getNetInterfaceStat(name);</span><br><span class="line">            System.out.println(name + &quot;接收的总包裹数:&quot; + ifstat.getRxPackets());&#x2F;&#x2F; 接收的总包裹数</span><br><span class="line">            System.out.println(name + &quot;发送的总包裹数:&quot; + ifstat.getTxPackets());&#x2F;&#x2F; 发送的总包裹数</span><br><span class="line">            System.out.println(name + &quot;接收到的总字节数:&quot; + ifstat.getRxBytes());&#x2F;&#x2F; 接收到的总字节数</span><br><span class="line">            System.out.println(name + &quot;发送的总字节数:&quot; + ifstat.getTxBytes());&#x2F;&#x2F; 发送的总字节数</span><br><span class="line">            System.out.println(name + &quot;接收到的错误包数:&quot; + ifstat.getRxErrors());&#x2F;&#x2F; 接收到的错误包数</span><br><span class="line">            System.out.println(name + &quot;发送数据包时的错误数:&quot; + ifstat.getTxErrors());&#x2F;&#x2F; 发送数据包时的错误数</span><br><span class="line">            System.out.println(name + &quot;接收时丢弃的包数:&quot; + ifstat.getRxDropped());&#x2F;&#x2F; 接收时丢弃的包数</span><br><span class="line">            System.out.println(name + &quot;发送时丢弃的包数:&quot; + ifstat.getTxDropped());&#x2F;&#x2F; 发送时丢弃的包数</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void ethernet() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; null;</span><br><span class="line">        sigar &#x3D; new Sigar();</span><br><span class="line">        String[] ifaces &#x3D; sigar.getNetInterfaceList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; ifaces.length; i++) &#123;</span><br><span class="line">            NetInterfaceConfig cfg &#x3D; sigar.getNetInterfaceConfig(ifaces[i]);</span><br><span class="line">            if (NetFlags.LOOPBACK_ADDRESS.equals(cfg.getAddress()) || (cfg.getFlags() &amp; NetFlags.IFF_LOOPBACK) !&#x3D; 0</span><br><span class="line">                    || NetFlags.NULL_HWADDR.equals(cfg.getHwaddr())) &#123;</span><br><span class="line">                continue;</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(cfg.getName() + &quot;IP地址:&quot; + cfg.getAddress());&#x2F;&#x2F; IP地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网关广播地址:&quot; + cfg.getBroadcast());&#x2F;&#x2F; 网关广播地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡MAC地址:&quot; + cfg.getHwaddr());&#x2F;&#x2F; 网卡MAC地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;子网掩码:&quot; + cfg.getNetmask());&#x2F;&#x2F; 子网掩码</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡描述信息:&quot; + cfg.getDescription());&#x2F;&#x2F; 网卡描述信息</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡类型&quot; + cfg.getType());&#x2F;&#x2F;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/" data-id="ckf6hmw1k001z2rsb34g3al3v" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2020/09/17/lombok%20plugin%E6%8F%92%E4%BB%B6%20%E6%B3%A8%E8%A7%A3vo%E7%B1%BB/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title"></div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/09/17/lombok%20plugin%E6%8F%92%E4%BB%B6%20%E6%B3%A8%E8%A7%A3vo%E7%B1%BB/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 VinhoJiang<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>

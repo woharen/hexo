@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+
+  
+  <title>Vinho的私人笔记</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta property="og:type" content="website">
+<meta property="og:title" content="Vinho的私人笔记">
+<meta property="og:url" content="https://meihao1104.com/page/2/index.html">
+<meta property="og:site_name" content="Vinho的私人笔记">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:author" content="VinhoJiang">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Vinho的私人笔记" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+<meta name="generator" content="Hexo 5.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Vinho的私人笔记</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://meihao1104.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main">
+  
+    <article id="post-Redis实现Redlock分布式锁" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="Redis实现Redlock分布式锁-依赖"><a href="#Redis实现Redlock分布式锁-依赖" class="headerlink" title="Redis实现Redlock分布式锁## 依赖"></a>Redis实现Redlock分布式锁## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--Springboot环境下 redis分布式锁 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson-spring-boot-starter<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- Springboot环境下 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//创建连接1</span></span><br><span class="line">    RedissonClient redissonClient1 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//创建连接2</span></span><br><span class="line">    RedissonClient redissonClient2 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">1</span>);</span><br><span class="line">    <span class="comment">//创建连接3</span></span><br><span class="line">    RedissonClient redissonClient3 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">2</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//设置锁的key</span></span><br><span class="line">    String resourceName = <span class="string">&quot;REDLOCK_KEY&quot;</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//获取锁</span></span><br><span class="line">    RLock lock1 = redissonClient1.getLock(resourceName);</span><br><span class="line">    RLock lock2 = redissonClient2.getLock(resourceName);</span><br><span class="line">    RLock lock3 = redissonClient3.getLock(resourceName);</span><br><span class="line">    <span class="comment">// 向3个redis实例尝试加锁</span></span><br><span class="line">    RedissonRedLock redLock = <span class="keyword">new</span> RedissonRedLock(lock1, lock2, lock3);</span><br><span class="line">    <span class="keyword">boolean</span> isLock;</span><br><span class="line">    </span><br><span class="line">    List&lt;MaxLimitRankingVo&gt; list = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 500ms拿不到锁, 就认为获取锁失败。10000ms即10s是锁失效时间。</span></span><br><span class="line">        isLock = redLock.tryLock(<span class="number">500</span>, <span class="number">10000</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        System.out.println(<span class="string">&quot;isLock = &quot;</span>+isLock);</span><br><span class="line">        <span class="keyword">if</span> (isLock) &#123;</span><br><span class="line">            Thread.sleep(<span class="number">8000</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// 无论如何, 最后都要解锁</span></span><br><span class="line">        redLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取 RedissonClient</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> RedissonClient <span class="title">getRedissonClient</span><span class="params">(String address, <span class="keyword">int</span> database)</span></span>&#123;</span><br><span class="line">    Config config = <span class="keyword">new</span> Config();</span><br><span class="line">    config.useSingleServer().setAddress(address).setDatabase(database);</span><br><span class="line">    <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="文档参考"><a href="#文档参考" class="headerlink" title="文档参考"></a>文档参考</h2><p><a href="https://zhuanlan.zhihu.com/p/60309808">Redis分布式锁的正确实现方式</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" data-id="ckf6hmw08000g2rsb46rt22yb" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-VUE.JS 组件component" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="VUE-JS-组件component-1-什么是组件"><a href="#VUE-JS-组件component-1-什么是组件" class="headerlink" title="VUE.JS 组件component### 1. 什么是组件"></a>VUE.JS 组件component### 1. 什么是组件</h2><pre><code>组件是vue最强大的功能之一，组件可以扩展HTML元素、封装可重用的代码
+组件是自定义元素（对象）</code></pre>
+<h3 id="2-组件的定义方式"><a href="#2-组件的定义方式" class="headerlink" title="2. 组件的定义方式"></a>2. 组件的定义方式</h3><pre><code>建议在组件名称中加入：“-”
+
+方式一：先创建组件构造器，然后由构造器来创建组件
+方式二：直接创建组件
+
+
+/**
+    方式一：先创建组件构造器，然后由构造器来创建组件
+*/
+var myCompoent = Vue.extend(&#123;
+    template:&quot;&lt;h3&gt;hello VUE&lt;/h3&gt;&quot;
+&#125;);
+
+//使用Vue.component(标签名，组件的构造器)，根据组件构造器来创建组件
+Vue.component(&quot;my-hello&quot;,myCompoent);
+
+
+//范式二
+Vue.component(&quot;v-ps&quot;,&#123;
+    template:&quot;&lt;h2&gt;你好，VUE&lt;/h2&gt;&quot;
+&#125;)
+
+调用：
+    &lt;v-ps&gt;&lt;/v-ps&gt;
+    &lt;my-hello&gt;&lt;/my-hello&gt;</code></pre>
+<h3 id="3-组件分类"><a href="#3-组件分类" class="headerlink" title="3. 组件分类"></a>3. 组件分类</h3><pre><code>分类：
+    局部组件和全局组件</code></pre>
+<h3 id="4-模板引用"><a href="#4-模板引用" class="headerlink" title="4. 模板引用"></a>4. 模板引用</h3><pre><code>将组件的代码写到&lt;template&gt;&lt;/template&gt;中，并且引用。template必须只有一个直接子元素</code></pre>
+<h3 id="5-动态组件"><a href="#5-动态组件" class="headerlink" title="5.动态组件"></a>5.动态组件</h3><pre><code>使用keep-alive组件，缓存非活动的组件，可以保留组件状态，避免组件重新渲染（默认每次都会销毁非活动的组件并且重新渲染）</code></pre>
+<h2 id="二、组件之间的通讯"><a href="#二、组件之间的通讯" class="headerlink" title="二、组件之间的通讯"></a>二、组件之间的通讯</h2><h3 id="1-父子组件"><a href="#1-父子组件" class="headerlink" title="1. 父子组件"></a>1. 父子组件</h3><pre><code>在一个组件内部定义的另外一个组件，称为：父子组件
+子组件只能在父组件的内部使用
+默认情况下，父子组件数据无法之间访问，每个组件实例的作用域是独立的</code></pre>
+<h3 id="2-组件之间的数据通信"><a href="#2-组件之间的数据通信" class="headerlink" title="2. 组件之间的数据通信"></a>2. 组件之间的数据通信</h3><h4 id="2-1-子组件访问父组件的数据"><a href="#2-1-子组件访问父组件的数据" class="headerlink" title="2.1 子组件访问父组件的数据"></a>2.1 子组件访问父组件的数据</h4><pre><code>a)在调用子组件是，绑定想要接收的父组件的数据
+    &lt;my-world :message=&quot;msg&quot; :name=&quot;name&quot; &gt;&lt;/my-world&gt;
+
+b)在子组件内部使用props选项来声明获取数据（接收父组件的数据）
+    props:[&#39;message&#39;,&#39;name&#39;,&#39;user&#39;]
+    props:&#123;&#125;//也可以传递对象，允许配置高级设置，比如：数据的类型判断，数据的校验，设置默认值等。。。
+
+总结：
+    子组件通过props选项来接收父组件的数据
+    三种数据形式：data、props、computed</code></pre>
+<h4 id="2-2-父组件访问子组件的数据"><a href="#2-2-父组件访问子组件的数据" class="headerlink" title="2.2 父组件访问子组件的数据"></a>2.2 父组件访问子组件的数据</h4><pre><code>a）在子组件中使用vm.$emit(事件名，参数1，参数2 ，。。。。)触发一个自定义事件。
+    this.$emit(&quot;e-world&quot;,this.age,this.height);//触发一个事件，向父组件传递数据
+
+b) 在父组件中使用自组件的地方监听子组件触发的事件，并且在父组件中定义方法来获取子组件的数据
+    @e-world：监听子组件的事件
+    &lt;my-world :message=&quot;msg&quot; :name=&quot;name&quot; @e-world=&quot;getData&quot;&gt;&lt;/my-world&gt;</code></pre>
+<h3 id="3-单向数据流"><a href="#3-单向数据流" class="headerlink" title="3. 单向数据流"></a>3. 单向数据流</h3><pre><code>父级 prop 的更新会向下流动到子组件中，但是反过来则不行。
+不允许直接修改父组件的数据，否则会报错。
+解决方式：
+    1：
+        如果子组件想把传递过来的值，当做局部变量使用，可以将数据存储到另外一个变量中再操作。不影响父组件
+    2：
+        如果子组件想修改数据，并且同步到父组件中，两种方式
+        a.使用.sync指令（1.0支持，2.0不会，2.3版本以后又支持）
+            还需要触发一个更新事件 this.$emit(&#39;update:name&#39;, &quot;唐寅&quot;);
+        b.将父组件中的数据包装成一个对象，传递给子组件，然后在子组件中修改对象属性值（因为对象是引用类型，指向同一个内存地址），推荐！！！</code></pre>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckf6hmw09000h2rsb2vwycty5" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-VUE修改数据后不自动渲染" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。"><a href="#VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。" class="headerlink" title="VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。"></a>VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。</h2><p>先说说这个问题，</p>
+<h2 id="场景"><a href="#场景" class="headerlink" title="场景"></a>场景</h2><p>vue + element</p>
+<p>修改表格数据后，不重新加载整个表格的情况下修改局部数据发现数据不能自动渲染。<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1578628368283.png" alt="image.png"><br>wtf？？？<br>那就是没得谈咯,好吧，那就使用手动渲染吧。</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><ol>
+<li><p>给表格绑定key值</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-table :data&#x3D;&quot;xxx&quot; :key&#x3D;&quot;tableKey&quot;&gt;...</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在方法里添加以下代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">this.tableKey++;</span><br></pre></td></tr></table></figure>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><p><a href="https://cn.vuejs.org/v2/guide/list.html#%E7%BB%B4%E6%8A%A4%E7%8A%B6%E6%80%81">VUE官网 - 维护状态</a></p>
+</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckf6hmw0a000j2rsbdpadgo3l" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-Vue父子组件互调方法" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="Vue父子组件互调方法-父组件调用子组件方法"><a href="#Vue父子组件互调方法-父组件调用子组件方法" class="headerlink" title="Vue父子组件互调方法## 父组件调用子组件方法"></a>Vue父子组件互调方法## 父组件调用子组件方法</h2><h3 id="父组件代码"><a href="#父组件代码" class="headerlink" title="父组件代码"></a>父组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &lt;button @click&#x3D;&quot;getChild&quot;&gt;点击调用子组件&lt;&#x2F;button&gt;</span><br><span class="line">    &lt;child ref&#x3D;&quot;child&quot;&gt;&lt;&#x2F;child&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    import child from &quot;child&quot;;</span><br><span class="line">    export default&#123;</span><br><span class="line">        components: &#123;child&#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            getChild()&#123;</span><br><span class="line">                &#x2F;&#x2F; 调用子组件方法</span><br><span class="line">                this.$ref.child.init();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="子组件代码"><a href="#子组件代码" class="headerlink" title="子组件代码"></a>子组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &#123;&#123;value&#125;&#125;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    export default&#123;</span><br><span class="line">        data()&#123;</span><br><span class="line">            return &#123;</span><br><span class="line">                value: &quot;我是子组件&quot;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            init()&#123;</span><br><span class="line">                this.value &#x3D; &quot;父组件调用了方法&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="子组件调用父组件方法"><a href="#子组件调用父组件方法" class="headerlink" title="子组件调用父组件方法"></a>子组件调用父组件方法</h2><h3 id="父组件代码-1"><a href="#父组件代码-1" class="headerlink" title="父组件代码"></a>父组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &#123;&#123;value&#125;&#125;</span><br><span class="line">    &lt;child @init&#x3D;&quot;init&quot;&gt;&lt;&#x2F;child&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    import child from &quot;child&quot;;</span><br><span class="line">    export default&#123;</span><br><span class="line">        components: &#123;child&#125;,</span><br><span class="line">        data()&#123;</span><br><span class="line">            return &#123;</span><br><span class="line">                value: &quot;我是父组件&quot;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            init()&#123;</span><br><span class="line">                this.value &#x3D; &quot;子组件调用了方法&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="子组件代码-1"><a href="#子组件代码-1" class="headerlink" title="子组件代码"></a>子组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &lt;button @child&#x3D;&quot;getFather&quot;&gt;调用父组件方法&lt;&#x2F;button&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    export default&#123;</span><br><span class="line">        methods: &#123;</span><br><span class="line">            getFather()&#123;</span><br><span class="line">                &#x2F;&#x2F; 调用父组件方法</span><br><span class="line">                this.$emit(&quot;init&quot;);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckf6hmw0b000k2rsb2581birf" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-git 和 svn 的区别" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="git-和-svn-的区别-使用上"><a href="#git-和-svn-的区别-使用上" class="headerlink" title="git 和 svn 的区别## 使用上"></a>git 和 svn 的区别## 使用上</h2><p>git有本地库的一个概念，而svn是没有的</p>
+<ul>
+<li>git<ol>
+<li>提交代码到本地库</li>
+<li>拉取远程仓库代码</li>
+<li>解决冲突</li>
+<li>一次性提交修改的代码到远程仓库</li>
+<li>拉取远程仓库最新代码</li>
+</ol>
+</li>
+<li>svn<ol>
+<li>提交代码到远程仓库</li>
+<li>解决冲突</li>
+<li>拉取远程仓库最新代码</li>
+</ol>
+</li>
+</ul>
+<p>通过以上两个步骤可以发现，svn没有本地库这个概念，那么意味着什么呢？</p>
+<p>git可以离线也就是不依赖远程仓库去提交代码，你可以在本地库随时提交拉取代码，等到有网络了或者网络好的情况下再提交代码也是没问题的。</p>
+<p>而svn则重度依赖远程仓库，因为它只有远程仓库，那么如果没法在没有网络或者网络不好的情况下使用。</p>
+<h2 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h2><ul>
+<li>git</li>
+</ul>
+<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image-20191125100229586_1574648816037.png" alt="image20191125100229586.png"></p>
+<ul>
+<li>svn<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image-20191125100337069_1574648824801.png" alt="image20191125100337069.png"></li>
+</ul>
+<h2 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h2><h3 id="git"><a href="#git" class="headerlink" title="git"></a>git</h3><ul>
+<li><p>优点</p>
+<p>离线提交代码，可以有属于自己本地的版本库，提交代码随心所欲。</p>
+</li>
+<li><p>缺点</p>
+<p>目前使用中还没发现，如果有发现后续再更新</p>
+</li>
+</ul>
+<h3 id="svn"><a href="#svn" class="headerlink" title="svn"></a>svn</h3><ul>
+<li><p>优点</p>
+<p>还未发现</p>
+</li>
+<li><p>缺点</p>
+<p>必须要有网络才能提交，提交代码时感觉好折磨。</p>
+</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/Sungeek/p/9152223.html">SVN与Git比较的优缺点差异</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckf6hmw0c000l2rsb4oj3bika" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-git和svn提交时怎么忽略文件" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="git和svn提交时怎么忽略文件-git"><a href="#git和svn提交时怎么忽略文件-git" class="headerlink" title="git和svn提交时怎么忽略文件## git"></a>git和svn提交时怎么忽略文件## git</h2><ol>
+<li>在项目根目录下创建<code>.gitignore</code>文件</li>
+<li>在<code>.gitignore</code>文件中添加要屏蔽的文件 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 指定文件</span><br><span class="line">xxx.text</span><br><span class="line"># 指定文件夹</span><br><span class="line">dir</span><br><span class="line"># 匹配后缀名为 txt的文件</span><br><span class="line">*.txt</span><br></pre></td></tr></table></figure>
+<h2 id="svn"><a href="#svn" class="headerlink" title="svn"></a>svn</h2></li>
+<li>打开SVN的Version Control中的Local Changes下的Configure Ignored Files<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn1_1574652846178.png" alt="svn1.png"></li>
+<li>增加特定文件或文件夹<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/SVN_1574652823070.png" alt="SVN"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn3_1574652904330.png" alt="svn3.png"></li>
+</ol>
+<p>新版本如下</p>
+<ol>
+<li>打开 Settings→Editor→File Types</li>
+<li>在窗口最下方“Ignore files and folders”一栏中添加如下忽略： </li>
+<li>注意要用英文<code>;</code>符号隔开<br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn4_1574653034383.png" alt="svn4.png"></li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckf6hmw0c000n2rsb7lhsgj8m" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-idea 下 springboot 热部署" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="idea-下-springboot-热部署-依赖"><a href="#idea-下-springboot-热部署-依赖" class="headerlink" title="idea 下 springboot 热部署## 依赖"></a>idea 下 springboot 热部署## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--热部署 begin--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-devtools<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">optional</span>&gt;</span>true<span class="tag">&lt;/<span class="name">optional</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!--热部署 end--&gt;</span></span><br></pre></td></tr></table></figure>
+<h2 id="配置idea"><a href="#配置idea" class="headerlink" title="配置idea"></a>配置idea</h2><ol>
+<li><p>找到idea的Preferences -&gt; Build, Execution, Deployment -&gt; Compiler，勾选Build project automatically</p>
+</li>
+<li><p>回到idea正常界面，Mac使用快捷键shift+option+command+/，window上的快捷键是Shift+Ctrl+Alt+/，打开Registry，勾选<br>compiler.automake.allow.when.app.running</p>
+</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckf6hmw0d000p2rsb9mhq7bxl" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-idea自用插件" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="idea自用插件-开发"><a href="#idea自用插件-开发" class="headerlink" title="idea自用插件## 开发"></a>idea自用插件## 开发</h2><ul>
+<li>Alibaba Java Coding Guidelines 阿里巴巴代码规范</li>
+<li>Free MyBatis plugin 免费的Mybatis插件,可以快速在mapper文件和java代码中切换。</li>
+<li>Lombok 编制自动生成get，set方法</li>
+<li>ignore 用来设置git提交时需要过滤的文件</li>
+<li>Maven Helper  一键查看maven依赖，查看冲突的依赖，一键进行exclude依赖</li>
+<li>gitee  码云上传代码</li>
+<li>JRebel 代码热部署</li>
+</ul>
+<h2 id="辅助"><a href="#辅助" class="headerlink" title="辅助"></a>辅助</h2><ul>
+<li>Drumroll 在编译/构建时播放鼓声音。当构建有错误或警告时，以及其他同样有趣的声音。</li>
+<li>key-promoter-x 快捷键提示</li>
+<li>Nyan progress bar 加载进度条</li>
+<li>grep-console 多颜色调试日志</li>
+<li>Translation 界面翻译</li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckf6hmw0e000q2rsbfvld6gn1" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-微服务架构和单体架构" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="微服务架构和单体架构-一、微服务架构和单体架构"><a href="#微服务架构和单体架构-一、微服务架构和单体架构" class="headerlink" title="微服务架构和单体架构# 一、微服务架构和单体架构"></a>微服务架构和单体架构# 一、微服务架构和单体架构</h2><h2 id="微服务架构"><a href="#微服务架构" class="headerlink" title="微服务架构"></a>微服务架构</h2><h3 id="什么是微服务"><a href="#什么是微服务" class="headerlink" title="什么是微服务"></a>什么是微服务</h3><p>微服务架构的系统是一个分布式的系统，按业务进行划分为独立的服务单元，解决单体系统的不足，同时也满足越来越复杂的业务需求。</p>
+<blockquote>
+<p>微服务架构就是将单一程序开发成一个微服务，每个微服务运行在自己的进程中，并使用轻量级的机制通信，通常是HTTP RESTFUL API。这些服务围绕业务能力来划分，并通过自动化部署机制来独立部署。这些服务可以使用不同的编程语言，不同数据库，以保证最低限度的集中式管理。</p>
+</blockquote>
+<p>总结起来微服务就是将一个单体架构的应用按业务划分为一个个的独立运行的程序即服务，它们之间通过HTTP协议进行通信（也可以采用消息队列来通信，如RoocketMQ，Kafaka等），可以采用不同的编程语言，使用不同的存储技术，自动化部署（如Jenkins）减少人为控制，降低出错概率。服务数量越多，管理起来越复杂，因此采用集中化管理。例如Eureka，Zookeeper等都是比较常见的服务集中化管理框架。</p>
+<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard_1575276750822.png" alt="clipboard.png"></p>
+<h3 id="优势"><a href="#优势" class="headerlink" title="优势"></a>优势</h3><ol>
+<li><p><strong>轻巧</strong></p>
+<p>将复杂的业务拆分成多个小的业务，每个业务拆分成一个服务，将复杂的问题简单化。利于分工，降低新人的学习成本。 </p>
+</li>
+<li><p><strong>细分业务</strong></p>
+<p>微服务系统是分布式系统，业务与业务之间完全解耦，随着业务的增加可以根据业务再拆分，具有极强的横向扩展能力。面对搞并发的场景可以将服务集群化部署，加强系统负载能力。 </p>
+</li>
+<li><p><strong>功能独立</strong></p>
+<p>服务间采用HTTP协议通信，服务与服务之间完全独立。每个服务可以根据业务场景选取合适的编程语言和数据库。 </p>
+</li>
+<li><p><strong>不影响其他功能</strong></p>
+<p>微服务每个服务都是独立部署的，每个服务的修改和部署对其他服务没有影响。</p>
+</li>
+<li><p><strong>不受技术限制</strong></p>
+<p>在微服务中，我们可以结合项目业务及团队的特点，合理地选择技术栈</p>
+</li>
+</ol>
+<h3 id="微服务设计要点"><a href="#微服务设计要点" class="headerlink" title="微服务设计要点"></a>微服务设计要点</h3><ol>
+<li>AKF拆分原则</li>
+<li>前后端分离</li>
+<li>无状态服务</li>
+<li>Restful通信风格</li>
+</ol>
+<h2 id="传统单体架构"><a href="#传统单体架构" class="headerlink" title="传统单体架构"></a>传统单体架构</h2><h3 id="什么是单体架构"><a href="#什么是单体架构" class="headerlink" title="什么是单体架构"></a>什么是单体架构</h3><p>在软件设计的时候经常提到和使用经典的3层模型，即表现层，业务逻辑层，数据访问层。虽然在软件设计中划分了3层模型，但是对业务场景没有划分，一个典型的单体架构就是将所有的业务场景的表现层，业务逻辑层，数据访问层放在一个工程中最终经过编译，打包，部署在一台服务器上。此时服务架构如图： </p>
+<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard%20(1)_1575276761648.png" alt="clipboard 1.png"></p>
+<blockquote>
+<p>一个归档包（例如war格式）包含了应用所有功能的应用程序，我们通常称之为单体应用。架构单体应用的方法论，我们称之为单体应用架构。</p>
+</blockquote>
+<h3 id="单体架构的优点"><a href="#单体架构的优点" class="headerlink" title="单体架构的优点"></a>单体架构的优点</h3><ol>
+<li><p><strong>结构简单，容易理解</strong></p>
+<p> 对于开发人员而言，这是非常重要的一点。经典的分层架构已经相对比较成熟，更容易被更多的开发人员所理解和接受，学习成本也相对比较低，对团队本身的要求也不是特别高。这不仅使得系统的设计和开发都相对比较容易，而且出错的几率会相对低一些。用现在时髦的词语说，就是“坑相对较少”，开发实现都可以“踩在踩坑人的背上前进”</p>
+</li>
+<li><p><strong>实现数据一致性相对比较容易</strong></p>
+<p> 通过本地事务或者分布式事务可以方便有效地保证数据一致性</p>
+</li>
+<li><p><strong>部署简单方便</strong></p>
+<p> 可以方便快速地打包成WAR包，部署到Jetty或者Tomcat容器中。一次部署完成即可运行整个应用程序</p>
+</li>
+</ol>
+<blockquote>
+<p>总结起来，这种架构大致可以使用下图表示，各层组件可以通过相互引用进行相互调用，也可以通过IoC/DI实现解耦，进而实现应用程序“一体化”，这也是“单体架构”一词的由来：</p>
+</blockquote>
+<h3 id="单体架构存在的问题"><a href="#单体架构存在的问题" class="headerlink" title="单体架构存在的问题"></a>单体架构存在的问题</h3><ol>
+<li><p><strong>系统仍然为单体应用</strong></p>
+<p> 大量的业务必然会有大量的代码，代码的可读性和可维护性依然很差。</p>
+</li>
+<li><p><strong>存在瓶颈</strong></p>
+<p> 面对海量的用户，数据库将会成为瓶颈，解决方案将使用分布式数据库，也就是将数据库进行分库分表。</p>
+</li>
+<li><p><strong>持续交付能力差</strong></p>
+<p> 业务越复杂，代码越多，修改代码和添加代码所需的时间越长。新人熟悉代码的时间长、成本高。</p>
+</li>
+</ol>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://blog.csdn.net/sD7O95O/article/details/82141686">漫谈单体架构与微服务架构（上）：单体架构</a></p>
+<p><a href="https://www.cnblogs.com/guanghe/p/10978349.html">微服务设计、拆分原则</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/" data-id="ckf6hmw0z001c2rsb3dlb51yy" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-java 发邮件 javax.mail" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" class="article-date">
+  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="java-发邮件-javax-mail-依赖"><a href="#java-发邮件-javax-mail-依赖" class="headerlink" title="java 发邮件 javax.mail## 依赖"></a>java 发邮件 javax.mail## 依赖</h2><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;com.sun.mail&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;javax.mail&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.5.5&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="代码演示"><a href="#代码演示" class="headerlink" title="代码演示"></a>代码演示</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.panshi.utils;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.mail.*;</span><br><span class="line"><span class="keyword">import</span> javax.mail.internet.InternetAddress;</span><br><span class="line"><span class="keyword">import</span> javax.mail.internet.MimeMessage;</span><br><span class="line"><span class="keyword">import</span> java.util.Date;</span><br><span class="line"><span class="keyword">import</span> java.util.Properties;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span>: 发送邮箱验证码类</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span>: 蒋文豪</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@create</span>: 2019/06/13</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SendEmail</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SMTPSERVER = <span class="string">&quot;smtp.163.com&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SMTPPORT = <span class="string">&quot;465&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ACCOUT = <span class="string">&quot;xxx@163.com&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String PWD = <span class="string">&quot;密码&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 发送验证码</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> code 验证码</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">sendVerification</span><span class="params">(String address, String code)</span></span>&#123;</span><br><span class="line">        <span class="comment">// 创建邮件配置</span></span><br><span class="line">        Properties props = <span class="keyword">new</span> Properties();</span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.transport.protocol&quot;</span>, <span class="string">&quot;smtp&quot;</span>); <span class="comment">// 使用的协议（JavaMail规范要求）</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.host&quot;</span>, SMTPSERVER); <span class="comment">// 发件人的邮箱的 SMTP 服务器地址</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.port&quot;</span>, SMTPPORT); <span class="comment">//端口</span></span><br><span class="line">        props.put(<span class="string">&quot;mail.smtp.socketFactory.class&quot;</span>, <span class="string">&quot;javax.net.ssl.SSLSocketFactory&quot;</span>);</span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.auth&quot;</span>, <span class="string">&quot;true&quot;</span>); <span class="comment">// 需要请求认证</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.ssl.enable&quot;</span>, <span class="string">&quot;true&quot;</span>);<span class="comment">// 开启ssl</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 根据邮件配置创建会话，注意session别导错包</span></span><br><span class="line">        Session session = Session.getDefaultInstance(props);</span><br><span class="line">        <span class="comment">//创建邮件</span></span><br><span class="line">        MimeMessage message = <span class="keyword">new</span> MimeMessage(session);;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 发件人邮件地址, 发件人别名（收件邮箱显示）, charset编码方式</span></span><br><span class="line">            InternetAddress fromAddress = <span class="keyword">new</span> InternetAddress(ACCOUT,<span class="string">&quot;小尾巴96&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置发送邮件方</span></span><br><span class="line">            message.setFrom(fromAddress);</span><br><span class="line">            <span class="comment">//收件地址  发件人别名（自己邮箱显示）</span></span><br><span class="line">            InternetAddress receiveAddress = <span class="keyword">new</span> InternetAddress(<span class="string">&quot;xxx@qq.com&quot;</span>, <span class="string">&quot;VinhoJiang&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置邮件接收方</span></span><br><span class="line">            message.setRecipient(Message.RecipientType.TO, receiveAddress);</span><br><span class="line">            <span class="comment">// 设置邮件标题</span></span><br><span class="line">            message.setSubject(<span class="string">&quot;验证码&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">//邮件内容</span></span><br><span class="line">            <span class="comment">//msg.setText(&quot;您的验证码是4528&quot;);//普通文字</span></span><br><span class="line">            String htmlText = <span class="string">&quot;您的验证码是&lt;H2 style=&#x27;color:pink&#x27;&gt;&quot;</span>+code+<span class="string">&quot;&lt;/H2&gt;&quot;</span>;</span><br><span class="line">            <span class="comment">//以网页形式发送 UTF-8</span></span><br><span class="line">            message.setContent(htmlText, <span class="string">&quot;text/html;charset=UTF-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置显示的发件时间</span></span><br><span class="line">            message.setSentDate(<span class="keyword">new</span> Date());</span><br><span class="line">            <span class="comment">// 保存设置</span></span><br><span class="line">            message.saveChanges();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//获取传输通道</span></span><br><span class="line">        Transport transport = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport = session.getTransport();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (NoSuchProviderException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport.connect(SMTPSERVER,ACCOUT, PWD);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//连接，并发送邮件</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport.sendMessage(message, message.getAllRecipients());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                transport.close();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" data-id="ckf6hmw0f000s2rsb64msggkv" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+
+
+  <nav id="page-nav">
+    
+    <a class="extend prev" rel="prev" href="/">&amp;laquo; 上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" href="/page/3/">下一页 &amp;raquo;</a>
+  </nav>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签云</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2020/09/17/lombok%20plugin%E6%8F%92%E4%BB%B6%20%E6%B3%A8%E8%A7%A3vo%E7%B1%BB/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2020 VinhoJiang<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+  </div>
+</body>
+</html>
