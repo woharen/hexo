@@ -1,11 +1,5 @@
----
-title:  oracle表名、字段名等对象的命名长度限制(转)
-date: 2020.09.15 14:00
-tags:
-  - oracle
-toc: true
----
-
+# oracle表名、字段名等对象的命名长度限制(转)
+2020-09-17 14:32:05
 
 今天在为某系统数据库结构整理升级脚本时，遇到了“命名字节过长的错误”，类似于下面的截图语句：![img](https://img-blog.csdn.net/20150520000858224?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaHVhbmd5YW5sb25n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
 
