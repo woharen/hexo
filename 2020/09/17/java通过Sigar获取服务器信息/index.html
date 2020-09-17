@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Vinho的私人笔记">
 <meta property="og:description" content="java通过Sigar获取服务器信息## 介绍今天在开发过程中遇到个问题，怎么在JAVA中获取到服务器信息?经过寻找，终于找到了，那就是Sigar,那么什么是Sigar呢？  SigarSigar是Hyperic-hq产品的基础包,是HypericHQ主要的数据收集组件。它用来从许多平台收集系统和处理信息.这些平台包括：Linux,Windows, Solaris, AIX, HP-UX, Fre">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-09-17T07:23:45.016Z">
-<meta property="article:modified_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:published_time" content="2020-09-17T07:56:51.253Z">
+<meta property="article:modified_time" content="2020-09-17T07:56:51.253Z">
 <meta property="article:author" content="VinhoJiang">
 <meta name="twitter:card" content="summary">
   
@@ -69,7 +69,7 @@
         <section id="main"><article id="post-java通过Sigar获取服务器信息" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -85,9 +85,9 @@
 <p>能获取的信息有：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">CPU信息：包括基本信息（vendor、model、mhz、cacheSize）和统计信息（user、sys、idle、nice、wait）</span><br><span class="line">文件系统信息：包括Filesystem、Size、Used、Avail、Use%、Type</span><br><span class="line">事件信息：类似Service Control Manager</span><br><span class="line">内存信息：物理内存和交换内存的总数、使用数、剩余数；RAM的大小</span><br><span class="line">网络信息：包括网络接口信息和网络路由信息</span><br><span class="line">进程信息：包括每个进程的内存、CPU占用数、状态、参数、句柄</span><br><span class="line">IO信息：包括IO的状态，读写大小等</span><br><span class="line">服务状态信息</span><br><span class="line">系统信息：包括操作系统版本，系统资源限制情况，系统运行时间以及负载，JAVA的版本信息等</span><br></pre></td></tr></table></figure>
 
-<p><a href="http://www.hyperic.com/">Hyperic-hq官方网站</a></p>
-<p><a href="http://sigar.hyperic.com/">官网Sigar.jar下载地址</a></p>
-<p><a href="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/hyperic-sigar-1.6.4_1575944915413.zip">本站下载（推荐）</a></p>
+<p><a target="_blank" rel="noopener" href="http://www.hyperic.com/">Hyperic-hq官方网站</a></p>
+<p><a target="_blank" rel="noopener" href="http://sigar.hyperic.com/">官网Sigar.jar下载地址</a></p>
+<p><a target="_blank" rel="noopener" href="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/hyperic-sigar-1.6.4_1575944915413.zip">本站下载（推荐）</a></p>
 <h2 id="依赖"><a href="#依赖" class="headerlink" title="依赖"></a>依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;org.hyperic&lt;&#x2F;groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;sigar&lt;&#x2F;artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.6.4&lt;&#x2F;version&gt;</span><br><span class="line">&lt;&#x2F;dependency&gt;</span><br></pre></td></tr></table></figure>
 
 <h2 id="注意！！！！"><a href="#注意！！！！" class="headerlink" title="注意！！！！"></a>注意！！！！</h2><p>需要将基本库文件放到jdk的bin目录下，不放运行会抛异常。</p>
@@ -102,7 +102,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/" data-id="ckf6hmw1k001z2rsb34g3al3v" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/" data-id="ckf6itglt001z15xmecz00aap" class="article-share-link">Share</a>
       
       
     </footer>
@@ -121,7 +121,7 @@
     </a>
   
   
-    <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
       <div class="article-nav-title"></div>
     </a>
@@ -182,15 +182,15 @@
           </li>
         
           <li>
-            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/17/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
       </ul>

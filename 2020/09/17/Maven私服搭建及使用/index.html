@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Vinho的私人笔记">
 <meta property="og:description" content="Maven私服搭建及使用# Maven私服搭建及使用一、搭建环境1. 安装包安装包下载链接 当前服务器使用nexus  3.19.1-01 2. 安装步骤具体步骤参考资料 Linux下使用Nexus创建maven私服 二、注意事项密码错误帐号: admin 当前服务器使用的版本的初始密码不是之前的   admin123  具体密码在 &#x2F;nexus-data&#x2F;admin.password 中  （明">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-09-17T07:23:45.016Z">
-<meta property="article:modified_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:published_time" content="2020-09-17T07:56:51.249Z">
+<meta property="article:modified_time" content="2020-09-17T07:56:51.249Z">
 <meta property="article:author" content="VinhoJiang">
 <meta name="twitter:card" content="summary">
   
@@ -69,7 +69,7 @@
         <section id="main"><article id="post-Maven私服搭建及使用" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/Maven%E7%A7%81%E6%9C%8D%E6%90%AD%E5%BB%BA%E5%8F%8A%E4%BD%BF%E7%94%A8/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.249Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -78,8 +78,8 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="Maven私服搭建及使用-Maven私服搭建及使用"><a href="#Maven私服搭建及使用-Maven私服搭建及使用" class="headerlink" title="Maven私服搭建及使用# Maven私服搭建及使用"></a>Maven私服搭建及使用# Maven私服搭建及使用</h2><h2 id="一、搭建环境"><a href="#一、搭建环境" class="headerlink" title="一、搭建环境"></a>一、搭建环境</h2><h3 id="1-安装包"><a href="#1-安装包" class="headerlink" title="1. 安装包"></a>1. 安装包</h3><p><a href="https://www.sonatype.com/oss-thank-you-tar.gz">安装包下载链接</a></p>
-<p><a href="https://sonatype-download.global.ssl.fastly.net/nexus/3/latest-unix.tar.gz">当前服务器使用nexus  3.19.1-01</a></p>
+        <h2 id="Maven私服搭建及使用-Maven私服搭建及使用"><a href="#Maven私服搭建及使用-Maven私服搭建及使用" class="headerlink" title="Maven私服搭建及使用# Maven私服搭建及使用"></a>Maven私服搭建及使用# Maven私服搭建及使用</h2><h2 id="一、搭建环境"><a href="#一、搭建环境" class="headerlink" title="一、搭建环境"></a>一、搭建环境</h2><h3 id="1-安装包"><a href="#1-安装包" class="headerlink" title="1. 安装包"></a>1. 安装包</h3><p><a target="_blank" rel="noopener" href="https://www.sonatype.com/oss-thank-you-tar.gz">安装包下载链接</a></p>
+<p><a target="_blank" rel="noopener" href="https://sonatype-download.global.ssl.fastly.net/nexus/3/latest-unix.tar.gz">当前服务器使用nexus  3.19.1-01</a></p>
 <h3 id="2-安装步骤"><a href="#2-安装步骤" class="headerlink" title="2. 安装步骤"></a>2. 安装步骤</h3><p>具体步骤参考资料 <code>Linux下使用Nexus创建maven私服</code></p>
 <h2 id="二、注意事项"><a href="#二、注意事项" class="headerlink" title="二、注意事项"></a>二、注意事项</h2><h3 id="密码错误"><a href="#密码错误" class="headerlink" title="密码错误"></a>密码错误</h3><p>帐号: admin</p>
 <p>当前服务器使用的版本的初始密码不是之前的   admin123 </p>
@@ -90,14 +90,14 @@
 <p>maven的 settings.xml 需配置认证信息</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&lt;servers&gt;</span><br><span class="line">    &lt;server&gt;</span><br><span class="line">      &lt;id&gt;nexus-releases&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;username&gt;hadoop&lt;&#x2F;username&gt;</span><br><span class="line">      &lt;password&gt;hadoop&lt;&#x2F;password&gt;</span><br><span class="line">    &lt;&#x2F;server&gt;</span><br><span class="line">    &lt;server&gt;</span><br><span class="line">      &lt;id&gt;nexus-snapshot&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;username&gt;hadoop&lt;&#x2F;username&gt;</span><br><span class="line">      &lt;password&gt;hadoop&lt;&#x2F;password&gt;</span><br><span class="line">    &lt;&#x2F;server&gt;</span><br><span class="line">&lt;&#x2F;servers&gt;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&lt;mirror&gt;</span><br><span class="line">    &lt;id&gt;dev-repository-group&lt;&#x2F;id&gt;</span><br><span class="line">    &lt;mirrorOf&gt;*&lt;&#x2F;mirrorOf&gt;</span><br><span class="line">    &lt;name&gt;dev-repository-group&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;url&gt;http:&#x2F;&#x2F;192.168.8.123:8081&#x2F;repository&#x2F;dev-repository-group&lt;&#x2F;url&gt;</span><br><span class="line">&lt;&#x2F;mirror&gt;</span><br><span class="line">&lt;mirror&gt;</span><br><span class="line">    &lt;id&gt;dev-repository-hosted-snapshot&lt;&#x2F;id&gt;</span><br><span class="line">    &lt;mirrorOf&gt;*&lt;&#x2F;mirrorOf&gt;</span><br><span class="line">    &lt;name&gt;dev-repository-hosted-snapshot&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;url&gt;http:&#x2F;&#x2F;192.168.8.123:8081&#x2F;repository&#x2F;dev-repository-snapshot&lt;&#x2F;url&gt;</span><br><span class="line">&lt;&#x2F;mirror&gt;</span><br></pre></td></tr></table></figure>
 
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://cloud.tencent.com/developer/article/1336556">Linux下使用Nexus创建maven私服</a></p>
-<p>额外参考 <a href="https://cloud.tencent.com/developer/article/1098081">本地私服仓库nexus3.3.1使用手册</a></p>
-<p><a href="https://www.cnblogs.com/wbl001/p/11154828.html">Docker 搭建Maven私服nexus 3.17初始密码登录不上问题/admin登陆不上问题</a></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1336556">Linux下使用Nexus创建maven私服</a></p>
+<p>额外参考 <a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1098081">本地私服仓库nexus3.3.1使用手册</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/wbl001/p/11154828.html">Docker 搭建Maven私服nexus 3.17初始密码登录不上问题/admin登陆不上问题</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/Maven%E7%A7%81%E6%9C%8D%E6%90%AD%E5%BB%BA%E5%8F%8A%E4%BD%BF%E7%94%A8/" data-id="ckf6hmw0300092rsbcd9s6zcd" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/Maven%E7%A7%81%E6%9C%8D%E6%90%AD%E5%BB%BA%E5%8F%8A%E4%BD%BF%E7%94%A8/" data-id="ckf6itgkf000915xmchrx42iw" class="article-share-link">Share</a>
       
       
     </footer>
@@ -106,7 +106,7 @@
     
 <nav id="article-nav">
   
-    <a href="/2020/09/17/Jetbrains%E7%B3%BB%E5%88%97%E4%BA%A7%E5%93%812019.3.3%E6%9C%80%E6%96%B0%E6%BF%80%E6%B4%BB%E6%96%B9%E6%B3%95/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
@@ -116,7 +116,7 @@
     </a>
   
   
-    <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2020/09/17/Jetbrains%E7%B3%BB%E5%88%97%E4%BA%A7%E5%93%812019.3.3%E6%9C%80%E6%96%B0%E6%BF%80%E6%B4%BB%E6%96%B9%E6%B3%95/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
       <div class="article-nav-title"></div>
     </a>
@@ -177,15 +177,15 @@
           </li>
         
           <li>
-            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/17/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
       </ul>

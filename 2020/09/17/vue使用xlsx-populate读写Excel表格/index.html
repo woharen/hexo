@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Vinho的私人笔记">
 <meta property="og:description" content="vue使用xlsx-populate读写Excel表格## 依赖https:&#x2F;&#x2F;www.npmjs.com&#x2F;package&#x2F;xlsx-populate 读取文件123456789101112131415&#x2F;&#x2F; 读取表格数据readExcelFile(file) &amp;#123;    let _this &#x3D; this;    this.tableData &#x3D; [];    this.isCheck &#x3D;">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-09-17T07:23:45.016Z">
-<meta property="article:modified_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:published_time" content="2020-09-17T07:56:51.253Z">
+<meta property="article:modified_time" content="2020-09-17T07:56:51.253Z">
 <meta property="article:author" content="VinhoJiang">
 <meta name="twitter:card" content="summary">
   
@@ -69,7 +69,7 @@
         <section id="main"><article id="post-vue使用xlsx-populate读写Excel表格" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -78,14 +78,14 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="vue使用xlsx-populate读写Excel表格-依赖"><a href="#vue使用xlsx-populate读写Excel表格-依赖" class="headerlink" title="vue使用xlsx-populate读写Excel表格## 依赖"></a>vue使用xlsx-populate读写Excel表格## 依赖</h2><p><a href="https://www.npmjs.com/package/xlsx-populate">https://www.npmjs.com/package/xlsx-populate</a></p>
+        <h2 id="vue使用xlsx-populate读写Excel表格-依赖"><a href="#vue使用xlsx-populate读写Excel表格-依赖" class="headerlink" title="vue使用xlsx-populate读写Excel表格## 依赖"></a>vue使用xlsx-populate读写Excel表格## 依赖</h2><p><a target="_blank" rel="noopener" href="https://www.npmjs.com/package/xlsx-populate">https://www.npmjs.com/package/xlsx-populate</a></p>
 <h2 id="读取文件"><a href="#读取文件" class="headerlink" title="读取文件"></a>读取文件</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 读取表格数据</span></span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    let _this = <span class="keyword">this</span>;</span><br><span class="line">    <span class="keyword">this</span>.tableData = [];</span><br><span class="line">    <span class="keyword">this</span>.isCheck = <span class="keyword">true</span>;</span><br><span class="line">    XlsxPopulate.fromDataAsync(file).then(workbook =&gt; &#123;</span><br><span class="line">        let values = workbook.sheet(<span class="number">0</span>).usedRange().value();</span><br><span class="line">        window.console.log(values);</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(err =&gt; &#123;</span><br><span class="line">        window.console.error(err);</span><br><span class="line">        _this.$message.error(<span class="string">&quot;读取文件错误&quot;</span>);</span><br><span class="line">        <span class="comment">// 设置表格加载状态</span></span><br><span class="line">        _this.tableLoading = <span class="keyword">false</span>;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <h2 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 导出</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> data 导出数据</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fileName 文件名</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> type 后缀名</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">exportAccesses(data, fileName, type)&#123;</span><br><span class="line">    <span class="comment">// 1.设计表头</span></span><br><span class="line">    let row1 = [<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxxx&quot;</span>]</span><br><span class="line">    data.unshift(row1);</span><br><span class="line">    let workbook = XlsxPopulate.fromBlankAsync().then(workbook =&gt; &#123;</span><br><span class="line">        <span class="comment">//获取第一个工作表</span></span><br><span class="line">        <span class="keyword">var</span> sheet = workbook.sheet(<span class="number">0</span>);</span><br><span class="line">        <span class="comment">//设置值</span></span><br><span class="line">        sheet.cell(<span class="string">&quot;A1&quot;</span>).value(data).style(&#123;</span><br><span class="line">            border: <span class="keyword">true</span></span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="comment">//设置单元格合并</span></span><br><span class="line">        sheet.range(<span class="string">&quot;A1:E1&quot;</span>).merged(<span class="keyword">true</span>)</span><br><span class="line">        <span class="comment">//设置表头填充样式</span></span><br><span class="line">        <span class="keyword">for</span> (let i = <span class="number">1</span>; i &lt;= <span class="number">2</span>; i++) &#123;</span><br><span class="line">            let cells = sheet.row(i)._cells;</span><br><span class="line">            <span class="keyword">for</span> (let j = <span class="number">1</span>; j &lt; cells.length; j++) &#123;</span><br><span class="line">                cells[j].style(<span class="string">&quot;fill&quot;</span>, <span class="string">&quot;ddebf7&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//导出</span></span><br><span class="line">        <span class="keyword">return</span> workbook.outputAsync().then(blob =&gt; &#123;</span><br><span class="line">            type = undefined === type ? <span class="string">&quot;xlsx&quot;</span> : type;</span><br><span class="line">            <span class="keyword">this</span>.$fileUtils.saveFile(blob, fileName + <span class="string">&quot;.&quot;</span> + type);</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(function (err) &#123;</span><br><span class="line">        window.console.log(err.message || err);</span><br><span class="line">        <span class="keyword">throw</span> err;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/" data-id="ckf6hmw0q00122rsb3rs8cbdw" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/" data-id="ckf6itgl2001215xmbra323u8" class="article-share-link">Share</a>
       
       
     </footer>
@@ -94,7 +94,7 @@
     
 <nav id="article-nav">
   
-    <a href="/2020/09/17/tomcat%E4%B8%ADhtml%E4%B9%B1%E7%A0%81%E9%97%AE%E9%A2%98/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2020/09/17/vue%E5%9C%A8%E8%A7%A6%E5%8F%91%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%99%84%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%82%E6%95%B0/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
@@ -104,7 +104,7 @@
     </a>
   
   
-    <a href="/2020/09/17/vue%E5%9C%A8%E8%A7%A6%E5%8F%91%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%99%84%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%82%E6%95%B0/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2020/09/17/tomcat%E4%B8%ADhtml%E4%B9%B1%E7%A0%81%E9%97%AE%E9%A2%98/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
       <div class="article-nav-title"></div>
     </a>
@@ -165,15 +165,15 @@
           </li>
         
           <li>
-            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/17/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
       </ul>

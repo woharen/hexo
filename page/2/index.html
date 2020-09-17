@@ -64,10 +64,10 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-Redis实现Redlock分布式锁" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-spring-boot 经典布局 及 启动配置" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+    <a href="/2020/09/17/spring-boot%20%E7%BB%8F%E5%85%B8%E5%B8%83%E5%B1%80%20%E5%8F%8A%20%E5%90%AF%E5%8A%A8%E9%85%8D%E7%BD%AE/" class="article-date">
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -76,171 +76,258 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="Redis实现Redlock分布式锁-依赖"><a href="#Redis实现Redlock分布式锁-依赖" class="headerlink" title="Redis实现Redlock分布式锁## 依赖"></a>Redis实现Redlock分布式锁## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--Springboot环境下 redis分布式锁 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson-spring-boot-starter<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- Springboot环境下 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//创建连接1</span></span><br><span class="line">    RedissonClient redissonClient1 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//创建连接2</span></span><br><span class="line">    RedissonClient redissonClient2 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">1</span>);</span><br><span class="line">    <span class="comment">//创建连接3</span></span><br><span class="line">    RedissonClient redissonClient3 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">2</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//设置锁的key</span></span><br><span class="line">    String resourceName = <span class="string">&quot;REDLOCK_KEY&quot;</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//获取锁</span></span><br><span class="line">    RLock lock1 = redissonClient1.getLock(resourceName);</span><br><span class="line">    RLock lock2 = redissonClient2.getLock(resourceName);</span><br><span class="line">    RLock lock3 = redissonClient3.getLock(resourceName);</span><br><span class="line">    <span class="comment">// 向3个redis实例尝试加锁</span></span><br><span class="line">    RedissonRedLock redLock = <span class="keyword">new</span> RedissonRedLock(lock1, lock2, lock3);</span><br><span class="line">    <span class="keyword">boolean</span> isLock;</span><br><span class="line">    </span><br><span class="line">    List&lt;MaxLimitRankingVo&gt; list = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 500ms拿不到锁, 就认为获取锁失败。10000ms即10s是锁失效时间。</span></span><br><span class="line">        isLock = redLock.tryLock(<span class="number">500</span>, <span class="number">10000</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        System.out.println(<span class="string">&quot;isLock = &quot;</span>+isLock);</span><br><span class="line">        <span class="keyword">if</span> (isLock) &#123;</span><br><span class="line">            Thread.sleep(<span class="number">8000</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// 无论如何, 最后都要解锁</span></span><br><span class="line">        redLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取 RedissonClient</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> RedissonClient <span class="title">getRedissonClient</span><span class="params">(String address, <span class="keyword">int</span> database)</span></span>&#123;</span><br><span class="line">    Config config = <span class="keyword">new</span> Config();</span><br><span class="line">    config.useSingleServer().setAddress(address).setDatabase(database);</span><br><span class="line">    <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        <h2 id="spring-boot-经典布局-及-启动配置-依赖"><a href="#spring-boot-经典布局-及-启动配置-依赖" class="headerlink" title="spring-boot 经典布局 及 启动配置## 依赖"></a>spring-boot 经典布局 及 启动配置## 依赖</h2><p>pom.xml</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">project.build.sourceEncoding</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="name">project.build.sourceEncoding</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">maven.compiler.source</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">maven.compiler.source</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">maven.compiler.target</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">maven.compiler.target</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--</span></span><br><span class="line"><span class="comment">         spring-boot-starter-parent是一个特殊启动器，提供一些Maven的默认值。</span></span><br><span class="line"><span class="comment">         它还提供依赖管理 dependency-management 标签，以便您可以省略子模块依赖关系的版本标签。</span></span><br><span class="line"><span class="comment">    --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">parent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-parent<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.1.6.RELEASE<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">parent</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- 依赖Spring boot web 启动器 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-web<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--配置文件提示--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-configuration-processor<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">optional</span>&gt;</span>true<span class="tag">&lt;/<span class="name">optional</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- 可执行jar插件； 运行jar就等于运行了一个web项目--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-maven-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="文档参考"><a href="#文档参考" class="headerlink" title="文档参考"></a>文档参考</h2><p><a href="https://zhuanlan.zhihu.com/p/60309808">Redis分布式锁的正确实现方式</a></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" data-id="ckf6hmw08000g2rsb46rt22yb" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-VUE.JS 组件component" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/17/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="VUE-JS-组件component-1-什么是组件"><a href="#VUE-JS-组件component-1-什么是组件" class="headerlink" title="VUE.JS 组件component### 1. 什么是组件"></a>VUE.JS 组件component### 1. 什么是组件</h2><pre><code>组件是vue最强大的功能之一，组件可以扩展HTML元素、封装可重用的代码
-组件是自定义元素（对象）</code></pre>
-<h3 id="2-组件的定义方式"><a href="#2-组件的定义方式" class="headerlink" title="2. 组件的定义方式"></a>2. 组件的定义方式</h3><pre><code>建议在组件名称中加入：“-”
-
-方式一：先创建组件构造器，然后由构造器来创建组件
-方式二：直接创建组件
-
-
-/**
-    方式一：先创建组件构造器，然后由构造器来创建组件
-*/
-var myCompoent = Vue.extend(&#123;
-    template:&quot;&lt;h3&gt;hello VUE&lt;/h3&gt;&quot;
-&#125;);
-
-//使用Vue.component(标签名，组件的构造器)，根据组件构造器来创建组件
-Vue.component(&quot;my-hello&quot;,myCompoent);
-
-
-//范式二
-Vue.component(&quot;v-ps&quot;,&#123;
-    template:&quot;&lt;h2&gt;你好，VUE&lt;/h2&gt;&quot;
-&#125;)
-
-调用：
-    &lt;v-ps&gt;&lt;/v-ps&gt;
-    &lt;my-hello&gt;&lt;/my-hello&gt;</code></pre>
-<h3 id="3-组件分类"><a href="#3-组件分类" class="headerlink" title="3. 组件分类"></a>3. 组件分类</h3><pre><code>分类：
-    局部组件和全局组件</code></pre>
-<h3 id="4-模板引用"><a href="#4-模板引用" class="headerlink" title="4. 模板引用"></a>4. 模板引用</h3><pre><code>将组件的代码写到&lt;template&gt;&lt;/template&gt;中，并且引用。template必须只有一个直接子元素</code></pre>
-<h3 id="5-动态组件"><a href="#5-动态组件" class="headerlink" title="5.动态组件"></a>5.动态组件</h3><pre><code>使用keep-alive组件，缓存非活动的组件，可以保留组件状态，避免组件重新渲染（默认每次都会销毁非活动的组件并且重新渲染）</code></pre>
-<h2 id="二、组件之间的通讯"><a href="#二、组件之间的通讯" class="headerlink" title="二、组件之间的通讯"></a>二、组件之间的通讯</h2><h3 id="1-父子组件"><a href="#1-父子组件" class="headerlink" title="1. 父子组件"></a>1. 父子组件</h3><pre><code>在一个组件内部定义的另外一个组件，称为：父子组件
-子组件只能在父组件的内部使用
-默认情况下，父子组件数据无法之间访问，每个组件实例的作用域是独立的</code></pre>
-<h3 id="2-组件之间的数据通信"><a href="#2-组件之间的数据通信" class="headerlink" title="2. 组件之间的数据通信"></a>2. 组件之间的数据通信</h3><h4 id="2-1-子组件访问父组件的数据"><a href="#2-1-子组件访问父组件的数据" class="headerlink" title="2.1 子组件访问父组件的数据"></a>2.1 子组件访问父组件的数据</h4><pre><code>a)在调用子组件是，绑定想要接收的父组件的数据
-    &lt;my-world :message=&quot;msg&quot; :name=&quot;name&quot; &gt;&lt;/my-world&gt;
-
-b)在子组件内部使用props选项来声明获取数据（接收父组件的数据）
-    props:[&#39;message&#39;,&#39;name&#39;,&#39;user&#39;]
-    props:&#123;&#125;//也可以传递对象，允许配置高级设置，比如：数据的类型判断，数据的校验，设置默认值等。。。
-
-总结：
-    子组件通过props选项来接收父组件的数据
-    三种数据形式：data、props、computed</code></pre>
-<h4 id="2-2-父组件访问子组件的数据"><a href="#2-2-父组件访问子组件的数据" class="headerlink" title="2.2 父组件访问子组件的数据"></a>2.2 父组件访问子组件的数据</h4><pre><code>a）在子组件中使用vm.$emit(事件名，参数1，参数2 ，。。。。)触发一个自定义事件。
-    this.$emit(&quot;e-world&quot;,this.age,this.height);//触发一个事件，向父组件传递数据
-
-b) 在父组件中使用自组件的地方监听子组件触发的事件，并且在父组件中定义方法来获取子组件的数据
-    @e-world：监听子组件的事件
-    &lt;my-world :message=&quot;msg&quot; :name=&quot;name&quot; @e-world=&quot;getData&quot;&gt;&lt;/my-world&gt;</code></pre>
-<h3 id="3-单向数据流"><a href="#3-单向数据流" class="headerlink" title="3. 单向数据流"></a>3. 单向数据流</h3><pre><code>父级 prop 的更新会向下流动到子组件中，但是反过来则不行。
-不允许直接修改父组件的数据，否则会报错。
-解决方式：
-    1：
-        如果子组件想把传递过来的值，当做局部变量使用，可以将数据存储到另外一个变量中再操作。不影响父组件
-    2：
-        如果子组件想修改数据，并且同步到父组件中，两种方式
-        a.使用.sync指令（1.0支持，2.0不会，2.3版本以后又支持）
-            还需要触发一个更新事件 this.$emit(&#39;update:name&#39;, &quot;唐寅&quot;);
-        b.将父组件中的数据包装成一个对象，传递给子组件，然后在子组件中修改对象属性值（因为对象是引用类型，指向同一个内存地址），推荐！！！</code></pre>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckf6hmw09000h2rsb2vwycty5" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-VUE修改数据后不自动渲染" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/17/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。"><a href="#VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。" class="headerlink" title="VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。"></a>VUE修改数据后不自动渲染最近写vue写的脑瓜子有点疼，特别今天出现的问题更加头疼。</h2><p>先说说这个问题，</p>
-<h2 id="场景"><a href="#场景" class="headerlink" title="场景"></a>场景</h2><p>vue + element</p>
-<p>修改表格数据后，不重新加载整个表格的情况下修改局部数据发现数据不能自动渲染。<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1578628368283.png" alt="image.png"><br>wtf？？？<br>那就是没得谈咯,好吧，那就使用手动渲染吧。</p>
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><ol>
-<li><p>给表格绑定key值</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-table :data&#x3D;&quot;xxx&quot; :key&#x3D;&quot;tableKey&quot;&gt;...</span><br></pre></td></tr></table></figure>
+<h2 id="布局"><a href="#布局" class="headerlink" title="布局"></a>布局</h2><p>com</p>
+<ul>
+<li>example<ul>
+<li>myproject<ul>
+<li>Application.java</li>
+<li>domain<ul>
+<li>Customer.java</li>
+<li>CustomerRepository.java</li>
+</ul>
 </li>
-<li><p>在方法里添加以下代码</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">this.tableKey++;</span><br></pre></td></tr></table></figure>
-<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><p><a href="https://cn.vuejs.org/v2/guide/list.html#%E7%BB%B4%E6%8A%A4%E7%8A%B6%E6%80%81">VUE官网 - 维护状态</a></p>
+<li>service<ul>
+<li>CustomerService.java</li>
+</ul>
+</li>
+<li>web<ul>
+<li>CustomerController.java</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="启动函数"><a href="#启动函数" class="headerlink" title="启动函数"></a>启动函数</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.myproject;</span><br><span class="line"><span class="keyword">import</span> org.springframework.boot.SpringApplication;</span><br><span class="line"><span class="keyword">import</span> org.springframework.boot.autoconfigure.EnableAutoConfiguration;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.ComponentScan;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.Configuration;</span><br><span class="line"></span><br><span class="line"><span class="comment">//@Configuration</span></span><br><span class="line"><span class="comment">//@EnableAutoConfiguration</span></span><br><span class="line"><span class="comment">//@ComponentScan</span></span><br><span class="line"><span class="comment">//以上注解可直接换成@SpringBootApplication使用</span></span><br><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        SpringApplication.run(Application.class, args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="静态资源"><a href="#静态资源" class="headerlink" title="静态资源"></a>静态资源</h2><ul>
+<li>默认情况下，SpringBoot将从类路径或ServletContext的根目录中的名为/static（或/public或/resources或/META-INF/resources）的目录提供静态内容</li>
+<li>它使用Spring MVC中的ResourceHttpRequestHandler，因此您可以通过添加自己的WebMvcConfigurerAdapter并覆盖addResourceHandlers方法来修改该行为。</li>
+<li>默认情况下，资源映射到/ ，但可以通过spring.mvc.static-path-pattern调整。 例如，将所有资源重定位到 /resources/可以配置如下：  <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">spring.mvc.static‐path‐pattern=/resources/**</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># 修改前</span><br><span class="line">127.0.0.1:8080/xxx.html</span><br><span class="line"># 修改后</span><br><span class="line">127.0.0.1:8080/resources/xxx.html</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="错误页"><a href="#错误页" class="headerlink" title="错误页"></a>错误页</h2><p>resources.static.error.404.html</p>
+<h2 id="自定义图标"><a href="#自定义图标" class="headerlink" title="自定义图标"></a>自定义图标</h2><p>resources.static.favicon.ico</p>
+<h2 id="热部署"><a href="#热部署" class="headerlink" title="热部署"></a>热部署</h2><p>pom.xml依赖</p>
+<!-- 热部署 -->
+
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-devtools<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">optional</span>&gt;</span>true<span class="tag">&lt;/<span class="name">optional</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+<p>IDEA配置</p>
+<p>当我们修改了Java类后，IDEA默认是不自动编译的，而spring-boot-devtools又是监测classpath下的文件发生变化才会重启应用，所以需要设置IDEA的自动编译：</p>
+<p>（1）File-Settings-Compiler-Build Project automatically</p>
+<p>（2）ctrl + shift + alt + /,选择Registry,勾上 Compiler autoMake allow when app running</p>
+<p>你可以实时自动重启了</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/spring-boot%20%E7%BB%8F%E5%85%B8%E5%B8%83%E5%B1%80%20%E5%8F%8A%20%E5%90%AF%E5%8A%A8%E9%85%8D%E7%BD%AE/" data-id="ckf6itgl0001015xmb3pp3u19" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-oracle表名、字段名等对象的命名长度限制" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/oracle%E8%A1%A8%E5%90%8D%E3%80%81%E5%AD%97%E6%AE%B5%E5%90%8D%E7%AD%89%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%91%BD%E5%90%8D%E9%95%BF%E5%BA%A6%E9%99%90%E5%88%B6/" class="article-date">
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="oracle表名、字段名等对象的命名长度限制-转"><a href="#oracle表名、字段名等对象的命名长度限制-转" class="headerlink" title="oracle表名、字段名等对象的命名长度限制(转)"></a>oracle表名、字段名等对象的命名长度限制(转)</h1><p>2020-09-17 14:32:05</p>
+<p>今天在为某系统数据库结构整理升级脚本时，遇到了“命名字节过长的错误”，类似于下面的截图语句：<img src="https://img-blog.csdn.net/20150520000858224?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaHVhbmd5YW5sb25n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center" alt="img"></p>
+<p>​    由于升级的结构中对于字段名的命名根据业务进行了修改，出现了命名过长的情况。</p>
+<p>这里想说一下，对于oracle，表名、字段名等对象命名字节个数限制在了30个字节！是无法更改的，这是oracle的固化设置。</p>
+<p>​    我们可以通过查看数据库字典进一步验证一下。先思考一下，哪里可以获得关于这类命名的信息呢？有没有想到USER_TAB_COLUMNS,USER_CONSTRAINTS这一类的视图。我们来做一个验证。</p>
+<p>实验:</p>
+<p>​    在sys用户下，查看user_tables这个视图，可以发现在table_name这个字段，类型为varchar，长度为30，这里记录的表的名称，如下：</p>
+<p><img src="https://img-blog.csdn.net/20150520001045338?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaHVhbmd5YW5sb25n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center" alt="img"></p>
+<p>再进一步查看视图的结构，如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">or</span> <span class="keyword">replace</span> <span class="keyword">view</span> user_tables</span><br><span class="line">(table_name, tablespace_name, cluster_name, iot_name, <span class="keyword">status</span>, pct_free, pct_used, ini_trans, max_trans, initial_extent, next_extent, min_extents, max_extents, pct_increase, <span class="keyword">freelists</span>, freelist_groups, <span class="keyword">logging</span>, backed_up, num_rows, blocks, empty_blocks, avg_space, chain_cnt, avg_row_len, avg_space_freelist_blocks, num_freelist_blocks, degree, instances, <span class="keyword">cache</span>, table_lock, sample_size, last_analyzed, partitioned, iot_type, <span class="keyword">temporary</span>, secondary, <span class="keyword">nested</span>, <span class="keyword">buffer_pool</span>, <span class="keyword">flash_cache</span>, cell_flash_cache, row_movement, global_stats, user_stats, <span class="keyword">duration</span>, skip_corrupt, <span class="keyword">monitoring</span>, cluster_owner, dependencies, compression, compress_for, dropped, read_only, segment_created, <span class="keyword">result_cache</span>)</span><br><span class="line"><span class="keyword">as</span></span><br><span class="line"><span class="keyword">select</span> o.name,</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property,<span class="number">2151678048</span>), <span class="number">0</span>, ts.name,</span><br><span class="line">              <span class="keyword">decode</span>(t.ts<span class="comment">#, 0, null, ts.name)),</span></span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">1024</span>), <span class="number">0</span>, <span class="literal">null</span>, co.name),</span><br><span class="line">       <span class="keyword">decode</span>((bitand(t.property, <span class="number">512</span>)+bitand(t.flags, <span class="number">536870912</span>)),</span><br><span class="line">              <span class="number">0</span>, <span class="literal">null</span>, co.name),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.trigflag, <span class="number">1073741824</span>), <span class="number">1073741824</span>, <span class="string">&#x27;UNUSABLE&#x27;</span>, <span class="string">&#x27;VALID&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>+<span class="number">64</span>), <span class="number">0</span>, <span class="keyword">mod</span>(t.pctfree$, <span class="number">100</span>), <span class="number">64</span>, <span class="number">0</span>, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(ts.flags, <span class="number">32</span>), <span class="number">32</span>, to_number(<span class="literal">NULL</span>),</span><br><span class="line">          <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>+<span class="number">64</span>), <span class="number">0</span>, t.pctused$, <span class="number">64</span>, <span class="number">0</span>, <span class="literal">null</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>), <span class="number">0</span>, t.initrans, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>), <span class="number">0</span>, t.maxtrans, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                     ds.initial_stg * ts.blocksize,</span><br><span class="line">                     s.iniexts * ts.blocksize),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">              ds.next_stg * ts.blocksize,</span><br><span class="line">              s.extsize * ts.blocksize),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">              ds.minext_stg, s.minexts),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">              ds.maxext_stg, s.maxexts),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(ts.flags, <span class="number">3</span>), <span class="number">1</span>, to_number(<span class="literal">NULL</span>),</span><br><span class="line">              <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                            ds.pctinc_stg, s.extpct)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(ts.flags, <span class="number">32</span>), <span class="number">32</span>, to_number(<span class="literal">NULL</span>),</span><br><span class="line">         <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="number">1</span>,</span><br><span class="line">                <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                       ds.frlins_stg, <span class="keyword">decode</span>(s.lists, <span class="number">0</span>, <span class="number">1</span>, s.lists)))),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(ts.flags, <span class="number">32</span>), <span class="number">32</span>, to_number(<span class="literal">NULL</span>),</span><br><span class="line">         <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="number">1</span>,</span><br><span class="line">                <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                       ds.maxins_stg, <span class="keyword">decode</span>(s.groups, <span class="number">0</span>, <span class="number">1</span>, s.groups)))),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>+<span class="number">64</span>), <span class="number">0</span>,</span><br><span class="line">                <span class="keyword">decode</span>(bitand(t.flags, <span class="number">32</span>), <span class="number">0</span>, <span class="string">&#x27;YES&#x27;</span>, <span class="string">&#x27;NO&#x27;</span>), <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags,<span class="number">1</span>), <span class="number">0</span>, <span class="string">&#x27;Y&#x27;</span>, <span class="number">1</span>, <span class="string">&#x27;N&#x27;</span>, <span class="string">&#x27;?&#x27;</span>),</span><br><span class="line">       t.rowcnt,</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">64</span>), <span class="number">0</span>, t.blkcnt, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">64</span>), <span class="number">0</span>, t.empcnt, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">64</span>), <span class="number">0</span>, t.avgspc, <span class="literal">null</span>),</span><br><span class="line">       t.chncnt, t.avgrln, t.avgspc_flb,</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">64</span>), <span class="number">0</span>, t.flbcnt, <span class="literal">null</span>),</span><br><span class="line">       <span class="keyword">lpad</span>(<span class="keyword">decode</span>(t.degree, <span class="number">32767</span>, <span class="string">&#x27;DEFAULT&#x27;</span>, nvl(t.degree,<span class="number">1</span>)),<span class="number">10</span>),</span><br><span class="line">       <span class="keyword">lpad</span>(<span class="keyword">decode</span>(t.instances, <span class="number">32767</span>, <span class="string">&#x27;DEFAULT&#x27;</span>, nvl(t.instances,<span class="number">1</span>)),<span class="number">10</span>),</span><br><span class="line">       <span class="keyword">lpad</span>(<span class="keyword">decode</span>(bitand(t.flags, <span class="number">8</span>), <span class="number">8</span>, <span class="string">&#x27;Y&#x27;</span>, <span class="string">&#x27;N&#x27;</span>),<span class="number">5</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">6</span>), <span class="number">0</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>),</span><br><span class="line">       t.samplesize, t.analyzetime,</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>), <span class="number">32</span>, <span class="string">&#x27;YES&#x27;</span>, <span class="string">&#x27;NO&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">64</span>), <span class="number">64</span>, <span class="string">&#x27;IOT&#x27;</span>,</span><br><span class="line">               <span class="keyword">decode</span>(bitand(t.property, <span class="number">512</span>), <span class="number">512</span>, <span class="string">&#x27;IOT_OVERFLOW&#x27;</span>,</span><br><span class="line">               <span class="keyword">decode</span>(bitand(t.flags, <span class="number">536870912</span>), <span class="number">536870912</span>, <span class="string">&#x27;IOT_MAPPING&#x27;</span>, <span class="literal">null</span>))),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">0</span>, <span class="string">&#x27;N&#x27;</span>, <span class="number">2</span>, <span class="string">&#x27;Y&#x27;</span>, <span class="string">&#x27;N&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">16</span>), <span class="number">0</span>, <span class="string">&#x27;N&#x27;</span>, <span class="number">16</span>, <span class="string">&#x27;Y&#x27;</span>, <span class="string">&#x27;N&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">8192</span>), <span class="number">8192</span>, <span class="string">&#x27;YES&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(bitand(t.property, <span class="number">1</span>), <span class="number">0</span>, <span class="string">&#x27;NO&#x27;</span>, <span class="string">&#x27;YES&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="string">&#x27;DEFAULT&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(bitand(<span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                            ds.bfp_stg, s.cachehint), <span class="number">3</span>),</span><br><span class="line">                            <span class="number">1</span>, <span class="string">&#x27;KEEP&#x27;</span>, <span class="number">2</span>, <span class="string">&#x27;RECYCLE&#x27;</span>, <span class="string">&#x27;DEFAULT&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="string">&#x27;DEFAULT&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(bitand(<span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                            ds.bfp_stg, s.cachehint), <span class="number">12</span>)/<span class="number">4</span>,</span><br><span class="line">                            <span class="number">1</span>, <span class="string">&#x27;KEEP&#x27;</span>, <span class="number">2</span>, <span class="string">&#x27;NONE&#x27;</span>, <span class="string">&#x27;DEFAULT&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="string">&#x27;DEFAULT&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(bitand(<span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>,</span><br><span class="line">                            ds.bfp_stg, s.cachehint), <span class="number">48</span>)/<span class="number">16</span>,</span><br><span class="line">                            <span class="number">1</span>, <span class="string">&#x27;KEEP&#x27;</span>, <span class="number">2</span>, <span class="string">&#x27;NONE&#x27;</span>, <span class="string">&#x27;DEFAULT&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">131072</span>), <span class="number">131072</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">512</span>), <span class="number">0</span>, <span class="string">&#x27;NO&#x27;</span>, <span class="string">&#x27;YES&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">256</span>), <span class="number">0</span>, <span class="string">&#x27;NO&#x27;</span>, <span class="string">&#x27;YES&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">0</span>, <span class="literal">NULL</span>,</span><br><span class="line">           <span class="keyword">decode</span>(bitand(t.property, <span class="number">8388608</span>), <span class="number">8388608</span>,</span><br><span class="line">                  <span class="string">&#x27;SYS$SESSION&#x27;</span>, <span class="string">&#x27;SYS$TRANSACTION&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">1024</span>), <span class="number">1024</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">2</span>), <span class="number">2</span>, <span class="string">&#x27;NO&#x27;</span>,</span><br><span class="line">           <span class="keyword">decode</span>(bitand(t.property, <span class="number">2147483648</span>), <span class="number">2147483648</span>, <span class="string">&#x27;NO&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(ksppcv.ksppstvl, <span class="string">&#x27;TRUE&#x27;</span>, <span class="string">&#x27;YES&#x27;</span>, <span class="string">&#x27;NO&#x27;</span>))),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">1024</span>), <span class="number">0</span>, <span class="literal">null</span>, cu.name),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.flags, <span class="number">8388608</span>), <span class="number">8388608</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>),</span><br><span class="line">       <span class="keyword">case</span> <span class="keyword">when</span> (bitand(t.property, <span class="number">32</span>) = <span class="number">32</span>) <span class="keyword">then</span></span><br><span class="line">         <span class="literal">null</span></span><br><span class="line">       <span class="keyword">when</span> (bitand(t.property, <span class="number">17179869184</span>) = <span class="number">17179869184</span>) <span class="keyword">then</span></span><br><span class="line">         <span class="keyword">decode</span>(bitand(ds.flags_stg, <span class="number">4</span>), <span class="number">4</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>)</span><br><span class="line">       <span class="keyword">else</span></span><br><span class="line">         <span class="keyword">decode</span>(bitand(s.spare1, <span class="number">2048</span>), <span class="number">2048</span>, <span class="string">&#x27;ENABLED&#x27;</span>, <span class="string">&#x27;DISABLED&#x27;</span>)</span><br><span class="line">       <span class="keyword">end</span>,</span><br><span class="line">       <span class="keyword">case</span> <span class="keyword">when</span> (bitand(t.property, <span class="number">32</span>) = <span class="number">32</span>) <span class="keyword">then</span></span><br><span class="line">         <span class="literal">null</span></span><br><span class="line">       <span class="keyword">when</span> (bitand(t.property, <span class="number">17179869184</span>) = <span class="number">17179869184</span>) <span class="keyword">then</span></span><br><span class="line">          <span class="keyword">decode</span>(bitand(ds.flags_stg, <span class="number">4</span>), <span class="number">4</span>,</span><br><span class="line">          <span class="keyword">case</span> <span class="keyword">when</span> bitand(ds.cmpflag_stg, <span class="number">3</span>) = <span class="number">1</span> <span class="keyword">then</span> <span class="string">&#x27;BASIC&#x27;</span></span><br><span class="line">               <span class="keyword">when</span> bitand(ds.cmpflag_stg, <span class="number">3</span>) = <span class="number">2</span> <span class="keyword">then</span> <span class="string">&#x27;OLTP&#x27;</span></span><br><span class="line">               <span class="keyword">else</span> <span class="keyword">decode</span>(ds.cmplvl_stg, <span class="number">1</span>, <span class="string">&#x27;QUERY LOW&#x27;</span>,</span><br><span class="line">                                          <span class="number">2</span>, <span class="string">&#x27;QUERY HIGH&#x27;</span>,</span><br><span class="line">                                          <span class="number">3</span>, <span class="string">&#x27;ARCHIVE LOW&#x27;</span>,</span><br><span class="line">                                             <span class="string">&#x27;ARCHIVE HIGH&#x27;</span>) <span class="keyword">end</span>,</span><br><span class="line">               <span class="literal">null</span>)</span><br><span class="line">       <span class="keyword">else</span></span><br><span class="line">         <span class="keyword">decode</span>(bitand(s.spare1, <span class="number">2048</span>), <span class="number">0</span>, <span class="literal">null</span>,</span><br><span class="line">         <span class="keyword">case</span> <span class="keyword">when</span> bitand(s.spare1, <span class="number">16777216</span>) = <span class="number">16777216</span>   <span class="comment">-- 0x1000000</span></span><br><span class="line">                   <span class="keyword">then</span> <span class="string">&#x27;OLTP&#x27;</span></span><br><span class="line">              <span class="keyword">when</span> bitand(s.spare1, <span class="number">100663296</span>) = <span class="number">33554432</span>  <span class="comment">-- 0x2000000</span></span><br><span class="line">                   <span class="keyword">then</span> <span class="string">&#x27;QUERY LOW&#x27;</span></span><br><span class="line">              <span class="keyword">when</span> bitand(s.spare1, <span class="number">100663296</span>) = <span class="number">67108864</span>  <span class="comment">-- 0x4000000</span></span><br><span class="line">                   <span class="keyword">then</span> <span class="string">&#x27;QUERY HIGH&#x27;</span></span><br><span class="line">              <span class="keyword">when</span> bitand(s.spare1, <span class="number">100663296</span>) = <span class="number">100663296</span> <span class="comment">-- 0x2000000+0x4000000</span></span><br><span class="line">                   <span class="keyword">then</span> <span class="string">&#x27;ARCHIVE LOW&#x27;</span></span><br><span class="line">              <span class="keyword">when</span> bitand(s.spare1, <span class="number">134217728</span>) = <span class="number">134217728</span> <span class="comment">-- 0x8000000</span></span><br><span class="line">                   <span class="keyword">then</span> <span class="string">&#x27;ARCHIVE HIGH&#x27;</span></span><br><span class="line">              <span class="keyword">else</span> <span class="string">&#x27;BASIC&#x27;</span> <span class="keyword">end</span>)</span><br><span class="line">       <span class="keyword">end</span>,</span><br><span class="line">       <span class="keyword">decode</span>(bitand(o.flags, <span class="number">128</span>), <span class="number">128</span>, <span class="string">&#x27;YES&#x27;</span>, <span class="string">&#x27;NO&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.trigflag, <span class="number">2097152</span>), <span class="number">2097152</span>, <span class="string">&#x27;YES&#x27;</span>, <span class="string">&#x27;NO&#x27;</span>),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property, <span class="number">17179869184</span>), <span class="number">17179869184</span>, <span class="string">&#x27;NO&#x27;</span>,</span><br><span class="line">              <span class="keyword">decode</span>(bitand(t.property, <span class="number">32</span>), <span class="number">32</span>, <span class="string">&#x27;N/A&#x27;</span>, <span class="string">&#x27;YES&#x27;</span>)),</span><br><span class="line">       <span class="keyword">decode</span>(bitand(t.property,<span class="number">16492674416640</span>),<span class="number">2199023255552</span>,<span class="string">&#x27;FORCE&#x27;</span>,</span><br><span class="line">                     <span class="number">4398046511104</span>,<span class="string">&#x27;MANUAL&#x27;</span>,<span class="string">&#x27;DEFAULT&#x27;</span>)</span><br><span class="line"><span class="keyword">from</span> sys.ts$ ts, sys.seg$ s, sys.obj$ co, sys.tab$ t, sys.obj$ o,</span><br><span class="line">     sys.deferred_stg$ ds, sys.obj$ cx, sys.user$ cu, x$ksppcv ksppcv,</span><br><span class="line">     x$ksppi ksppi</span><br><span class="line"><span class="keyword">where</span> o.owner<span class="comment"># = userenv(&#x27;SCHEMAID&#x27;)</span></span><br><span class="line">  <span class="keyword">and</span> o.obj<span class="comment"># = t.obj#</span></span><br><span class="line">  <span class="keyword">and</span> bitand(t.property, <span class="number">1</span>) = <span class="number">0</span></span><br><span class="line">  <span class="keyword">and</span> bitand(o.flags, <span class="number">128</span>) = <span class="number">0</span></span><br><span class="line">  <span class="keyword">and</span> t.bobj<span class="comment"># = co.obj# (+)</span></span><br><span class="line">  <span class="keyword">and</span> t.ts<span class="comment"># = ts.ts#</span></span><br><span class="line">  <span class="keyword">and</span> t.file<span class="comment"># = s.file# (+)</span></span><br><span class="line">  <span class="keyword">and</span> t.block<span class="comment"># = s.block# (+)</span></span><br><span class="line">  <span class="keyword">and</span> t.ts<span class="comment"># = s.ts# (+)</span></span><br><span class="line">  <span class="keyword">and</span> t.obj<span class="comment"># = ds.obj# (+)</span></span><br><span class="line">  <span class="keyword">and</span> t.dataobj<span class="comment"># = cx.obj# (+)</span></span><br><span class="line">  <span class="keyword">and</span> cx.owner<span class="comment"># = cu.user# (+)</span></span><br><span class="line">  <span class="keyword">and</span> ksppi.indx = ksppcv.indx</span><br><span class="line">  <span class="keyword">and</span> ksppi.ksppinm = <span class="string">&#x27;_dml_monitoring_enabled&#x27;</span></span><br><span class="line">;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">table</span> USER_TABLES <span class="keyword">is</span> <span class="string">&#x27;Description of the user&#x27;&#x27;s own relational tables&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.TABLE_NAME <span class="keyword">is</span> <span class="string">&#x27;Name of the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.TABLESPACE_NAME <span class="keyword">is</span> <span class="string">&#x27;Name of the tablespace containing the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.CLUSTER_NAME <span class="keyword">is</span> <span class="string">&#x27;Name of the cluster, if any, to which the table belongs&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.IOT_NAME <span class="keyword">is</span> <span class="string">&#x27;Name of the index-only table, if any, to which the overflow or mapping table entry belongs&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.STATUS <span class="keyword">is</span> <span class="string">&#x27;Status of the table will be UNUSABLE if a previous DROP TABLE operation failed,</span></span><br><span class="line"><span class="string">VALID otherwise&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.PCT_FREE <span class="keyword">is</span> <span class="string">&#x27;Minimum percentage of free space in a block&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.PCT_USED <span class="keyword">is</span> <span class="string">&#x27;Minimum percentage of used space in a block&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.INI_TRANS <span class="keyword">is</span> <span class="string">&#x27;Initial number of transactions&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.MAX_TRANS <span class="keyword">is</span> <span class="string">&#x27;Maximum number of transactions&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.INITIAL_EXTENT <span class="keyword">is</span> <span class="string">&#x27;Size of the initial extent in bytes&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.NEXT_EXTENT <span class="keyword">is</span> <span class="string">&#x27;Size of secondary extents in bytes&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.MIN_EXTENTS <span class="keyword">is</span> <span class="string">&#x27;Minimum number of extents allowed in the segment&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.MAX_EXTENTS <span class="keyword">is</span> <span class="string">&#x27;Maximum number of extents allowed in the segment&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.PCT_INCREASE <span class="keyword">is</span> <span class="string">&#x27;Percentage increase in extent size&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.FREELISTS <span class="keyword">is</span> <span class="string">&#x27;Number of process freelists allocated in this segment&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.FREELIST_GROUPS <span class="keyword">is</span> <span class="string">&#x27;Number of freelist groups allocated in this segment&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.LOGGING <span class="keyword">is</span> <span class="string">&#x27;Logging attribute&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.BACKED_UP <span class="keyword">is</span> <span class="string">&#x27;Has table been backed up since last modification?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.NUM_ROWS <span class="keyword">is</span> <span class="string">&#x27;The number of rows in the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.BLOCKS <span class="keyword">is</span> <span class="string">&#x27;The number of used blocks in the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.EMPTY_BLOCKS <span class="keyword">is</span> <span class="string">&#x27;The number of empty (never used) blocks in the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.AVG_SPACE <span class="keyword">is</span> <span class="string">&#x27;The average available free space in the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.CHAIN_CNT <span class="keyword">is</span> <span class="string">&#x27;The number of chained rows in the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.AVG_ROW_LEN <span class="keyword">is</span> <span class="string">&#x27;The average row length, including row overhead&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.AVG_SPACE_FREELIST_BLOCKS <span class="keyword">is</span> <span class="string">&#x27;The average freespace of all blocks on a freelist&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.NUM_FREELIST_BLOCKS <span class="keyword">is</span> <span class="string">&#x27;The number of blocks on the freelist&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.DEGREE <span class="keyword">is</span> <span class="string">&#x27;The number of threads per instance for scanning the table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.INSTANCES <span class="keyword">is</span> <span class="string">&#x27;The number of instances across which the table is to be scanned&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.CACHE <span class="keyword">is</span> <span class="string">&#x27;Whether the table is to be cached in the buffer cache&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.TABLE_LOCK <span class="keyword">is</span> <span class="string">&#x27;Whether table locking is enabled or disabled&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.SAMPLE_SIZE <span class="keyword">is</span> <span class="string">&#x27;The sample size used in analyzing this table&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.LAST_ANALYZED <span class="keyword">is</span> <span class="string">&#x27;The date of the most recent time this table was analyzed&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.PARTITIONED <span class="keyword">is</span> <span class="string">&#x27;Is this table partitioned? YES or NO&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.IOT_TYPE <span class="keyword">is</span> <span class="string">&#x27;If index-only table, then IOT_TYPE is IOT or IOT_OVERFLOW or IOT_MAPPING else NULL&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.TEMPORARY <span class="keyword">is</span> <span class="string">&#x27;Can the current session only see data that it place in this object itself?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.SECONDARY <span class="keyword">is</span> <span class="string">&#x27;Is this table object created as part of icreate for domain indexes?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.NESTED <span class="keyword">is</span> <span class="string">&#x27;Is the table a nested table?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.BUFFER_POOL <span class="keyword">is</span> <span class="string">&#x27;The default buffer pool to be used for table blocks&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.FLASH_CACHE <span class="keyword">is</span> <span class="string">&#x27;The default flash cache hint to be used for table blocks&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.CELL_FLASH_CACHE <span class="keyword">is</span> <span class="string">&#x27;The default cell flash cache hint to be used for table blocks&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.ROW_MOVEMENT <span class="keyword">is</span> <span class="string">&#x27;Whether partitioned row movement is enabled or disabled&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.GLOBAL_STATS <span class="keyword">is</span> <span class="string">&#x27;Are the statistics calculated without merging underlying partitions?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.USER_STATS <span class="keyword">is</span> <span class="string">&#x27;Were the statistics entered directly by the user?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.DURATION <span class="keyword">is</span> <span class="string">&#x27;If temporary table, then duration is sys$session or sys$transaction else NULL&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.SKIP_CORRUPT <span class="keyword">is</span> <span class="string">&#x27;Whether skip corrupt blocks is enabled or disabled&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.MONITORING <span class="keyword">is</span> <span class="string">&#x27;Should we keep track of the amount of modification?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.CLUSTER_OWNER <span class="keyword">is</span> <span class="string">&#x27;Owner of the cluster, if any, to which the table belongs&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.DEPENDENCIES <span class="keyword">is</span> <span class="string">&#x27;Should we keep track of row level dependencies?&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.COMPRESSION <span class="keyword">is</span> <span class="string">&#x27;Whether table compression is enabled or not&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.COMPRESS_FOR <span class="keyword">is</span> <span class="string">&#x27;Compress what kind of operations&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.DROPPED <span class="keyword">is</span> <span class="string">&#x27;Whether table is dropped and is in Recycle Bin&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.READ_ONLY <span class="keyword">is</span> <span class="string">&#x27;Whether table is read only or not&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.SEGMENT_CREATED <span class="keyword">is</span> <span class="string">&#x27;Whether the table segment is created or not&#x27;</span>;</span><br><span class="line"><span class="keyword">comment</span> <span class="keyword">on</span> <span class="keyword">column</span> USER_TABLES.RESULT_CACHE <span class="keyword">is</span> <span class="string">&#x27;The result cache mode annotation for the table&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong><em>\</em>我们可以由视图结构中锁定到三个地方，定位到来源，如下：**</strong></p>
+<p><strong><em>\</em>table_name**</strong></p>
+<p><strong><em>\</em>o.name**</strong></p>
+<p><strong><em>\</em>sys.obj$ o**</strong></p>
+<p><strong><em>\</em>可以发现，\</strong>*<em>table_name*</em>*<em>字段来源于*</em>*<em>sys.obj$*</em>*<em>中的*</em>*<em>name*</em>*<em>字段，如下*</em>：**<br><img src="https://img-blog.csdn.net/20150520001225568?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaHVhbmd5YW5sb25n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center" alt="img"></p>
+<p><strong>我们尝试修改一下\</strong>sys.obj$**中name字段的长度，如下：**</p>
+<p><img src="https://img-blog.csdn.net/20150520001221680?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaHVhbmd5YW5sb25n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center" alt="img"></p>
+<p>​    可以看到，我们是无法修改数据库系统的字典字段的定义。用同样的方法，我们还可以查看USER_TAB_COLUMNS,USER_CONSTRAINTS等视图，会发现对于oracle，限制了命名的长度，都限制在了30个字节。</p>
+<p>​    之后在网上搜了一下，发现对于不同的数据库原来命名长度限制是不一样的，摘录如下：</p>
+<table>
+<thead>
+<tr>
+<th>数据库</th>
+<th>表名长度限制</th>
+<th>字段名长度限制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>oracle</td>
+<td>30</td>
+<td>30</td>
+</tr>
+<tr>
+<td>mysql</td>
+<td>64</td>
+<td>64</td>
+</tr>
+<tr>
+<td>db2</td>
+<td>128</td>
+<td>128</td>
+</tr>
+<tr>
+<td>access</td>
+<td>64</td>
+<td>64</td>
+</tr>
+<tr>
+<td>sqlserver</td>
+<td>128</td>
+<td>128</td>
+</tr>
+</tbody></table>
+<h2 id="连接参考"><a href="#连接参考" class="headerlink" title="连接参考"></a>连接参考</h2><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/huangyanlong/article/details/45854385/">oracle表名、字段名等对象的命名长度限制</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/oracle%E8%A1%A8%E5%90%8D%E3%80%81%E5%AD%97%E6%AE%B5%E5%90%8D%E7%AD%89%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%91%BD%E5%90%8D%E9%95%BF%E5%BA%A6%E9%99%90%E5%88%B6/" data-id="ckf6itgkz000z15xmb31dbo5o" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-mybatis-config.xml 配置文件详解" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/mybatis-config.xml%20%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AF%A6%E8%A7%A3/" class="article-date">
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="mybatis-config-xml-配置文件详解"><a href="#mybatis-config-xml-配置文件详解" class="headerlink" title="mybatis-config.xml 配置文件详解"></a>mybatis-config.xml 配置文件详解</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot; ?&gt;</span><br><span class="line">&lt;!DOCTYPE configuration</span><br><span class="line">        PUBLIC &quot;-&#x2F;&#x2F;mybatis.org&#x2F;&#x2F;DTD Config 3.0&#x2F;&#x2F;EN&quot;</span><br><span class="line">        &quot;http:&#x2F;&#x2F;mybatis.org&#x2F;dtd&#x2F;mybatis-3-config.dtd&quot;&gt;</span><br><span class="line">&lt;!--通过这个配置文件，完成mybatis与数据库的连接  --&gt;</span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;!--  环境  --&gt;</span><br><span class="line">    &lt;environments default&#x3D;&quot;development&quot;&gt;</span><br><span class="line">    &lt;!--    环境变量    --&gt;</span><br><span class="line">        &lt;environment id&#x3D;&quot;development&quot;&gt;</span><br><span class="line">            &lt;!--  事务管理器，指定事务管理类型，type&#x3D;&quot;JDBC&quot;指直接简单使用了JDBC的提交和回滚设置 --&gt;</span><br><span class="line">            &lt;transactionManager type&#x3D;&quot;JDBC&quot;&#x2F;&gt;</span><br><span class="line">            &lt;!--  dataSource指数据源配置，POOLED是JDBC连接对象的数据源连接池的实现。 --&gt;</span><br><span class="line">            &lt;dataSource type&#x3D;&quot;POOLED&quot;&gt;</span><br><span class="line">                &lt;!--  数据属性 --&gt;</span><br><span class="line">                &lt;property name&#x3D;&quot;driver&quot; value&#x3D;&quot;com.mysql.cj.jdbc.Driver&quot;&#x2F;&gt;</span><br><span class="line">                &lt;property name&#x3D;&quot;url&quot; value&#x3D;&quot;jdbc:mysql:&#x2F;&#x2F;127.0.0.1:3306&#x2F;mybatis_study&quot;&#x2F;&gt;</span><br><span class="line">                &lt;property name&#x3D;&quot;username&quot; value&#x3D;&quot;root&quot;&#x2F;&gt;</span><br><span class="line">                &lt;property name&#x3D;&quot;password&quot; value&#x3D;&quot;ps123456&quot;&#x2F;&gt;</span><br><span class="line">            &lt;&#x2F;dataSource&gt;</span><br><span class="line">        &lt;&#x2F;environment&gt;</span><br><span class="line">    &lt;&#x2F;environments&gt;</span><br><span class="line">    &lt;!-- pojo的映射文件 --&gt;</span><br><span class="line">    &lt;mappers&gt;</span><br><span class="line">        &lt;!-- 用来告诉MyBatis从哪里去找映射文件，进而找到这些SQL语句。 --&gt;</span><br><span class="line">        &lt;mapper resource&#x3D;&quot;org&#x2F;mybatis&#x2F;example&#x2F;stuMapper.xml&quot;&#x2F;&gt;</span><br><span class="line">    &lt;&#x2F;mappers&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/17/mybatis-config.xml%20%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AF%A6%E8%A7%A3/" data-id="ckf6itgkx000y15xmdm6yd67u" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-mongodb入门" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/17/mongodb%E5%85%A5%E9%97%A8/" class="article-date">
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="mongodb入门-简介"><a href="#mongodb入门-简介" class="headerlink" title="mongodb入门## 简介"></a>mongodb入门## 简介</h2><p>MongoDB 是由C++语言编写的，是一个基于分布式文件存储的开源数据库系统。<br>在高负载的情况下，添加更多的节点，可以保证服务器性能。<br>MongoDB 将数据存储为一个文档，数据结构由键值(key=&gt;value)对组成。MongoDB 文档类似于 JSON 对象。字段值可以包含其他文档，数组及文档数组。</p>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><h3 id="下载-amp-安装"><a href="#下载-amp-安装" class="headerlink" title="下载&amp;安装"></a>下载&amp;安装</h3><p><a target="_blank" rel="noopener" href="https://www.mongodb.com/download-center#community">https://www.mongodb.com/download-center#community</a></p>
+<ul>
+<li><p>创建数据目录</p>
+<p> MongoDB将数据目录存储在db目录下。但是这个数据目录不会主动创建，我们在安装完成后需要创建它。</p>
+</li>
+</ul>
+<h3 id="启动MongoDB服务"><a href="#启动MongoDB服务" class="headerlink" title="启动MongoDB服务"></a>启动MongoDB服务</h3><figure class="highlight dos"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">创建数据库目录</span><br><span class="line">例如：E:\mongodb\db</span><br><span class="line"></span><br><span class="line">执行如下命令 (启动服务器) (进入到mongodb的bin目录)</span><br><span class="line">&gt; mongod --dbpath E:\mongodb\db</span><br><span class="line"></span><br><span class="line">使用客户端连接 (到mongodb的安装目录下)</span><br><span class="line">&gt; mongo.exe</span><br></pre></td></tr></table></figure>
+
+<h3 id="使用配置文件"><a href="#使用配置文件" class="headerlink" title="使用配置文件"></a>使用配置文件</h3><ol>
+<li><p>在安装目录下创建配置文件 config.cfg</p>
+</li>
+<li><p>编辑内容</p>
 </li>
 </ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#数据库数据存放目录</span><br><span class="line">dbpath&#x3D;E:\mongodb\db</span><br><span class="line">#端口号 默认为27017</span><br><span class="line">port&#x3D;27017 </span><br><span class="line">#mongodb所绑定的ip地址(运行本机与100两台电脑访问)</span><br><span class="line">bind_ip&#x3D;127.0.0.1,192.168.1.100</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>启动命令</li>
+</ol>
+<figure class="highlight dos"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&gt; mongod -f config.cfg</span><br></pre></td></tr></table></figure>
+
+<h2 id="概念解析"><a href="#概念解析" class="headerlink" title="概念解析"></a>概念解析</h2><table>
+<thead>
+<tr>
+<th>SQL术语/概念</th>
+<th>MongoDB术语/概念</th>
+<th>解释/说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>database</td>
+<td>database</td>
+<td>数据库</td>
+</tr>
+<tr>
+<td>table</td>
+<td>collection</td>
+<td>数据库表/集合</td>
+</tr>
+<tr>
+<td>row</td>
+<td>document</td>
+<td>数据记录行/文档</td>
+</tr>
+<tr>
+<td>column</td>
+<td>field</td>
+<td>数据字段/域</td>
+</tr>
+<tr>
+<td>index</td>
+<td>index</td>
+<td>索引</td>
+</tr>
+<tr>
+<td>table joins</td>
+<td>不支持</td>
+<td>表连接,MongoDB不支持</td>
+</tr>
+<tr>
+<td>primary key</td>
+<td>primary key</td>
+<td>主键,MongoDB自动将_id字段设置为主键</td>
+</tr>
+</tbody></table>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckf6hmw0a000j2rsbdpadgo3l" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Vue父子组件互调方法" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/17/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="Vue父子组件互调方法-父组件调用子组件方法"><a href="#Vue父子组件互调方法-父组件调用子组件方法" class="headerlink" title="Vue父子组件互调方法## 父组件调用子组件方法"></a>Vue父子组件互调方法## 父组件调用子组件方法</h2><h3 id="父组件代码"><a href="#父组件代码" class="headerlink" title="父组件代码"></a>父组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &lt;button @click&#x3D;&quot;getChild&quot;&gt;点击调用子组件&lt;&#x2F;button&gt;</span><br><span class="line">    &lt;child ref&#x3D;&quot;child&quot;&gt;&lt;&#x2F;child&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    import child from &quot;child&quot;;</span><br><span class="line">    export default&#123;</span><br><span class="line">        components: &#123;child&#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            getChild()&#123;</span><br><span class="line">                &#x2F;&#x2F; 调用子组件方法</span><br><span class="line">                this.$ref.child.init();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
-
-<h3 id="子组件代码"><a href="#子组件代码" class="headerlink" title="子组件代码"></a>子组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &#123;&#123;value&#125;&#125;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    export default&#123;</span><br><span class="line">        data()&#123;</span><br><span class="line">            return &#123;</span><br><span class="line">                value: &quot;我是子组件&quot;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            init()&#123;</span><br><span class="line">                this.value &#x3D; &quot;父组件调用了方法&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="子组件调用父组件方法"><a href="#子组件调用父组件方法" class="headerlink" title="子组件调用父组件方法"></a>子组件调用父组件方法</h2><h3 id="父组件代码-1"><a href="#父组件代码-1" class="headerlink" title="父组件代码"></a>父组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &#123;&#123;value&#125;&#125;</span><br><span class="line">    &lt;child @init&#x3D;&quot;init&quot;&gt;&lt;&#x2F;child&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    import child from &quot;child&quot;;</span><br><span class="line">    export default&#123;</span><br><span class="line">        components: &#123;child&#125;,</span><br><span class="line">        data()&#123;</span><br><span class="line">            return &#123;</span><br><span class="line">                value: &quot;我是父组件&quot;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        methods: &#123;</span><br><span class="line">            init()&#123;</span><br><span class="line">                this.value &#x3D; &quot;子组件调用了方法&quot;;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
-
-<h3 id="子组件代码-1"><a href="#子组件代码-1" class="headerlink" title="子组件代码"></a>子组件代码</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">    &lt;button @child&#x3D;&quot;getFather&quot;&gt;调用父组件方法&lt;&#x2F;button&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    export default&#123;</span><br><span class="line">        methods: &#123;</span><br><span class="line">            getFather()&#123;</span><br><span class="line">                &#x2F;&#x2F; 调用父组件方法</span><br><span class="line">                this.$emit(&quot;init&quot;);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br></pre></td></tr></table></figure>
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckf6hmw0b000k2rsb2581birf" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/mongodb%E5%85%A5%E9%97%A8/" data-id="ckf6itgku000x15xm8ysuhsw8" class="article-share-link">Share</a>
       
       
     </footer>
@@ -253,7 +340,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     <article id="post-git 和 svn 的区别" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -305,12 +392,12 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
 <p>必须要有网络才能提交，提交代码时感觉好折磨。</p>
 </li>
 </ul>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://www.cnblogs.com/Sungeek/p/9152223.html">SVN与Git比较的优缺点差异</a></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/Sungeek/p/9152223.html">SVN与Git比较的优缺点差异</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckf6hmw0c000l2rsb4oj3bika" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckf6itgko000l15xm4iol9o00" class="article-share-link">Share</a>
       
       
     </footer>
@@ -323,7 +410,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     <article id="post-git和svn提交时怎么忽略文件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -349,7 +436,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckf6hmw0c000n2rsb7lhsgj8m" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckf6itgkp000n15xm1c6642iz" class="article-share-link">Share</a>
       
       
     </footer>
@@ -362,7 +449,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     <article id="post-idea 下 springboot 热部署" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -382,7 +469,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckf6hmw0d000p2rsb9mhq7bxl" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckf6itgkp000p15xm778oa095" class="article-share-link">Share</a>
       
       
     </footer>
@@ -395,7 +482,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     <article id="post-idea自用插件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -424,7 +511,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckf6hmw0e000q2rsbfvld6gn1" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckf6itgkq000q15xm62344mkp" class="article-share-link">Share</a>
       
       
     </footer>
@@ -434,10 +521,10 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
 
 
   
-    <article id="post-微服务架构和单体架构" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-java定时任务" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+    <a href="/2020/09/17/java%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/" class="article-date">
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -446,72 +533,22 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="微服务架构和单体架构-一、微服务架构和单体架构"><a href="#微服务架构和单体架构-一、微服务架构和单体架构" class="headerlink" title="微服务架构和单体架构# 一、微服务架构和单体架构"></a>微服务架构和单体架构# 一、微服务架构和单体架构</h2><h2 id="微服务架构"><a href="#微服务架构" class="headerlink" title="微服务架构"></a>微服务架构</h2><h3 id="什么是微服务"><a href="#什么是微服务" class="headerlink" title="什么是微服务"></a>什么是微服务</h3><p>微服务架构的系统是一个分布式的系统，按业务进行划分为独立的服务单元，解决单体系统的不足，同时也满足越来越复杂的业务需求。</p>
-<blockquote>
-<p>微服务架构就是将单一程序开发成一个微服务，每个微服务运行在自己的进程中，并使用轻量级的机制通信，通常是HTTP RESTFUL API。这些服务围绕业务能力来划分，并通过自动化部署机制来独立部署。这些服务可以使用不同的编程语言，不同数据库，以保证最低限度的集中式管理。</p>
-</blockquote>
-<p>总结起来微服务就是将一个单体架构的应用按业务划分为一个个的独立运行的程序即服务，它们之间通过HTTP协议进行通信（也可以采用消息队列来通信，如RoocketMQ，Kafaka等），可以采用不同的编程语言，使用不同的存储技术，自动化部署（如Jenkins）减少人为控制，降低出错概率。服务数量越多，管理起来越复杂，因此采用集中化管理。例如Eureka，Zookeeper等都是比较常见的服务集中化管理框架。</p>
-<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard_1575276750822.png" alt="clipboard.png"></p>
-<h3 id="优势"><a href="#优势" class="headerlink" title="优势"></a>优势</h3><ol>
-<li><p><strong>轻巧</strong></p>
-<p>将复杂的业务拆分成多个小的业务，每个业务拆分成一个服务，将复杂的问题简单化。利于分工，降低新人的学习成本。 </p>
-</li>
-<li><p><strong>细分业务</strong></p>
-<p>微服务系统是分布式系统，业务与业务之间完全解耦，随着业务的增加可以根据业务再拆分，具有极强的横向扩展能力。面对搞并发的场景可以将服务集群化部署，加强系统负载能力。 </p>
-</li>
-<li><p><strong>功能独立</strong></p>
-<p>服务间采用HTTP协议通信，服务与服务之间完全独立。每个服务可以根据业务场景选取合适的编程语言和数据库。 </p>
-</li>
-<li><p><strong>不影响其他功能</strong></p>
-<p>微服务每个服务都是独立部署的，每个服务的修改和部署对其他服务没有影响。</p>
-</li>
-<li><p><strong>不受技术限制</strong></p>
-<p>在微服务中，我们可以结合项目业务及团队的特点，合理地选择技术栈</p>
-</li>
-</ol>
-<h3 id="微服务设计要点"><a href="#微服务设计要点" class="headerlink" title="微服务设计要点"></a>微服务设计要点</h3><ol>
-<li>AKF拆分原则</li>
-<li>前后端分离</li>
-<li>无状态服务</li>
-<li>Restful通信风格</li>
-</ol>
-<h2 id="传统单体架构"><a href="#传统单体架构" class="headerlink" title="传统单体架构"></a>传统单体架构</h2><h3 id="什么是单体架构"><a href="#什么是单体架构" class="headerlink" title="什么是单体架构"></a>什么是单体架构</h3><p>在软件设计的时候经常提到和使用经典的3层模型，即表现层，业务逻辑层，数据访问层。虽然在软件设计中划分了3层模型，但是对业务场景没有划分，一个典型的单体架构就是将所有的业务场景的表现层，业务逻辑层，数据访问层放在一个工程中最终经过编译，打包，部署在一台服务器上。此时服务架构如图： </p>
-<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard%20(1)_1575276761648.png" alt="clipboard 1.png"></p>
-<blockquote>
-<p>一个归档包（例如war格式）包含了应用所有功能的应用程序，我们通常称之为单体应用。架构单体应用的方法论，我们称之为单体应用架构。</p>
-</blockquote>
-<h3 id="单体架构的优点"><a href="#单体架构的优点" class="headerlink" title="单体架构的优点"></a>单体架构的优点</h3><ol>
-<li><p><strong>结构简单，容易理解</strong></p>
-<p> 对于开发人员而言，这是非常重要的一点。经典的分层架构已经相对比较成熟，更容易被更多的开发人员所理解和接受，学习成本也相对比较低，对团队本身的要求也不是特别高。这不仅使得系统的设计和开发都相对比较容易，而且出错的几率会相对低一些。用现在时髦的词语说，就是“坑相对较少”，开发实现都可以“踩在踩坑人的背上前进”</p>
-</li>
-<li><p><strong>实现数据一致性相对比较容易</strong></p>
-<p> 通过本地事务或者分布式事务可以方便有效地保证数据一致性</p>
-</li>
-<li><p><strong>部署简单方便</strong></p>
-<p> 可以方便快速地打包成WAR包，部署到Jetty或者Tomcat容器中。一次部署完成即可运行整个应用程序</p>
-</li>
-</ol>
-<blockquote>
-<p>总结起来，这种架构大致可以使用下图表示，各层组件可以通过相互引用进行相互调用，也可以通过IoC/DI实现解耦，进而实现应用程序“一体化”，这也是“单体架构”一词的由来：</p>
-</blockquote>
-<h3 id="单体架构存在的问题"><a href="#单体架构存在的问题" class="headerlink" title="单体架构存在的问题"></a>单体架构存在的问题</h3><ol>
-<li><p><strong>系统仍然为单体应用</strong></p>
-<p> 大量的业务必然会有大量的代码，代码的可读性和可维护性依然很差。</p>
-</li>
-<li><p><strong>存在瓶颈</strong></p>
-<p> 面对海量的用户，数据库将会成为瓶颈，解决方案将使用分布式数据库，也就是将数据库进行分库分表。</p>
-</li>
-<li><p><strong>持续交付能力差</strong></p>
-<p> 业务越复杂，代码越多，修改代码和添加代码所需的时间越长。新人熟悉代码的时间长、成本高。</p>
-</li>
-</ol>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://blog.csdn.net/sD7O95O/article/details/82141686">漫谈单体架构与微服务架构（上）：单体架构</a></p>
-<p><a href="https://www.cnblogs.com/guanghe/p/10978349.html">微服务设计、拆分原则</a></p>
+        <h2 id="java定时任务-依赖"><a href="#java定时任务-依赖" class="headerlink" title="java定时任务## 依赖"></a>java定时任务## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"> <span class="comment">&lt;!-- jar包版 --&gt;</span></span><br><span class="line"> <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.quartz-scheduler<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>quartz<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.3.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!--  启动器版    --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-quartz<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.1.6.RELEASE<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="使用方式"><a href="#使用方式" class="headerlink" title="使用方式"></a>使用方式</h2><h3 id="1-启动类注解"><a href="#1-启动类注解" class="headerlink" title="1. 启动类注解"></a>1. 启动类注解</h3><p>@EnableScheduling</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@EnableScheduling</span></span><br><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="meta">@MapperScan(&quot;com.panshi.qssys.dao&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MarketingApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        SpringApplication.run(MarketingApp.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-定时任务类"><a href="#2-定时任务类" class="headerlink" title="2. 定时任务类"></a>2. 定时任务类</h3><p>@Component</p>
+<p>所有的任务类命名规范   xxxTask , xxxTask<br>放到task包下<br>当任务比较多的时候，可以将task形成一个模块，项目</p>
+<h3 id="3-定时方法"><a href="#3-定时方法" class="headerlink" title="3. 定时方法"></a>3. 定时方法</h3><p>使用<code>cron</code>表达式</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Scheduled(cron = &quot;0/5 * * * * *&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span></span>&#123;</span><br><span class="line">    System.out.println(<span class="number">111</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="http://cron.qqe2.com/">cron表达式</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/" data-id="ckf6hmw0z001c2rsb3dlb51yy" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/java%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/" data-id="ckf6itgkt000v15xm6x2h9ske" class="article-share-link">Share</a>
       
       
     </footer>
@@ -524,7 +561,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     <article id="post-java 发邮件 javax.mail" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.253Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -539,7 +576,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" data-id="ckf6hmw0f000s2rsb64msggkv" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" data-id="ckf6itgkr000s15xm9zbmfhsi" class="article-share-link">Share</a>
       
       
     </footer>
@@ -607,15 +644,15 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
           </li>
         
           <li>
-            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/17/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
       </ul>

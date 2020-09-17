@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="Vinho的私人笔记">
 <meta property="og:description" content="Redis入门# Redis入门一、介绍redis是键值对的数据库，常用的五种数据类型为  字符串类型（string） 散列类型（hash） 列表类型（list） 集合类型（set） 有序集合类型（zset）  Redis用作缓存，主要两个用途：高性能，高并发，因为内存天然支持高并发 二、安装使用1.安装 epel仓库123yum search epelyum -y install epel-re">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2020-09-17T07:23:45.016Z">
-<meta property="article:modified_time" content="2020-09-17T07:23:45.016Z">
+<meta property="article:published_time" content="2020-09-17T07:56:51.249Z">
+<meta property="article:modified_time" content="2020-09-17T07:56:51.249Z">
 <meta property="article:author" content="VinhoJiang">
 <meta name="twitter:card" content="summary">
   
@@ -69,7 +69,7 @@
         <section id="main"><article id="post-Redis入门" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2020/09/17/Redis%E5%85%A5%E9%97%A8/" class="article-date">
-  <time datetime="2020-09-17T07:23:45.016Z" itemprop="datePublished">2020-09-17</time>
+  <time datetime="2020-09-17T07:56:51.249Z" itemprop="datePublished">2020-09-17</time>
 </a>
     
   </div>
@@ -97,7 +97,7 @@
 <h3 id="修改-etc-redis-conf"><a href="#修改-etc-redis-conf" class="headerlink" title="修改 /etc/redis.conf"></a>修改 /etc/redis.conf</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bind 192.168.1.238  绑定ip 远程操作</span><br></pre></td></tr></table></figure>
 
 
-<h3 id="redis的ui客户端"><a href="#redis的ui客户端" class="headerlink" title="redis的ui客户端"></a>redis的ui客户端</h3><p><a href="https://github.com/cinience/RedisStudio/releases">redisstudio</a></p>
+<h3 id="redis的ui客户端"><a href="#redis的ui客户端" class="headerlink" title="redis的ui客户端"></a>redis的ui客户端</h3><p><a target="_blank" rel="noopener" href="https://github.com/cinience/RedisStudio/releases">redisstudio</a></p>
 <p>redis-desktop-manager</p>
 <h2 id="二、redis简单配置"><a href="#二、redis简单配置" class="headerlink" title="二、redis简单配置"></a>二、redis简单配置</h2><ol>
 <li><p>设置登录密码（默认没有密码登陆）</p>
@@ -265,15 +265,15 @@
 </ul>
 <h4 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h4><p>假如客户端每秒发送5000个请求，其中4000个为黑客的恶意攻击，即在数据库中也查不到。举个例子，用户id为正数，黑客构造的用户id为负数，<br>如果黑客每秒一直发送这4000个请求，缓存就不起作用，数据库也很快被打死。</p>
 <p><strong>如何解决缓存穿透</strong><br>查询不到的数据也放到缓存，value为空，如set -999 “”<br>总而言之，缓存雪崩就是缓存失效，请求全部全部打到数据库，数据库瞬间被打死。缓存穿透就是查询了一个一定不存在的数据，并且从存储层查不到的数据没有写入缓存，这将导致这个不存在的数据每次请求都要到存储层去查询，失去了缓存的意义</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://zhuanlan.zhihu.com/p/76496852">Redis不只是缓存，还有n多种你没发现的妙用</a></p>
-<p><a href="https://blog.csdn.net/deaidai/article/details/89061998">理解Redis缓存「穿透」「雪崩」「击穿」以及解决方案和分析</a></p>
-<p><a href="https://zhuanlan.zhihu.com/p/61884327">关于Redis，学会这8点就够了</a></p>
-<p><a href="https://zhuanlan.zhihu.com/p/67937182">Redis 如何保持和 MySQL 数据一致</a></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/76496852">Redis不只是缓存，还有n多种你没发现的妙用</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/deaidai/article/details/89061998">理解Redis缓存「穿透」「雪崩」「击穿」以及解决方案和分析</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/61884327">关于Redis，学会这8点就够了</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/67937182">Redis 如何保持和 MySQL 数据一致</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/17/Redis%E5%85%A5%E9%97%A8/" data-id="ckf6hmw07000f2rsb1izr1e8n" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/17/Redis%E5%85%A5%E9%97%A8/" data-id="ckf6itgkk000f15xm6v9a2f5h" class="article-share-link">Share</a>
       
       
     </footer>
@@ -282,7 +282,7 @@
     
 <nav id="article-nav">
   
-    <a href="/2020/09/17/Navicat%20%E6%BF%80%E6%B4%BB%20Navicat%20Keygen%20Patch/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
@@ -292,7 +292,7 @@
     </a>
   
   
-    <a href="/2020/09/17/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2020/09/17/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
       <div class="article-nav-title"></div>
     </a>
@@ -353,15 +353,15 @@
           </li>
         
           <li>
-            <a href="/2020/09/17/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2020/09/17/%E9%80%9A%E8%BF%87%20pom%20%E8%AE%BE%E7%BD%AE%20Maven%20%E9%80%9A%E8%BF%87%20JDK%201.8%20%E8%BF%9B%E8%A1%8C%E7%BC%96%E8%AF%91%20%E2%80%94%E2%80%94maven-compiler-plugin%E6%8F%92%E4%BB%B6/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/17/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/17/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/17/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
       </ul>
