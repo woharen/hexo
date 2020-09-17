@@ -1,6 +1,6 @@
 ---
 title:  [转]oracle表名、字段名等对象的命名长度限制
-date: 2020.09.15 14:00:12
+date: 2020.09.15 14:00
 tags:
   - oracle
 toc: true
