@@ -1,4 +1,11 @@
-## lombok plugin插件 注解vo类>Lombok项目是一个Java库，它会自动插入编辑器和构建工具中，Lombok提供了一组有用的注释，用来消除Java类中的大量样板代码。仅五个字符(@Data)就可以替换数百行代码从而产生干净，简洁且易于维护的Java类。  ----百度百科
+---
+title:  lombok plugin插件
+date: 2020.09.18 14:00
+tags:
+  - java
+---
+
+>Lombok项目是一个Java库，它会自动插入编辑器和构建工具中，Lombok提供了一组有用的注释，用来消除Java类中的大量样板代码。仅五个字符(@Data)就可以替换数百行代码从而产生干净，简洁且易于维护的Java类。  ----百度百科
 ## 使用步骤
 1.  添加lombok plugin插件
 ![lombok.jpeg](https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/lombok_1574561506851.jpeg)
