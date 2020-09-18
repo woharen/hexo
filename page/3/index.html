@@ -233,18 +233,13 @@
 
 
   
-    <article id="post-vue读取json文件和下载文件" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-Ant Design of Vue 表格内使用按钮" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
   <div class="article-entry" itemprop="articleBody">
     
-    <h2 id="vue读取json文件和下载文件-读取json文件"><a href="#vue读取json文件和下载文件-读取json文件" class="headerlink" title="vue读取json文件和下载文件## 读取json文件"></a>vue读取json文件和下载文件## 读取json文件</h2><ol>
-<li>获取file文件<br> 具体步骤不说了，input上传文件或者elementUI上传文件都可以，只要拿到file对象就可以了</li>
-<li>读取内容<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">let file &#x3D; &quot;获取file文件对象&quot;;</span><br><span class="line">let reader &#x3D; new FileReader();</span><br><span class="line">reader.readAsText(file, &quot;UTF-8&quot;);</span><br><span class="line">reader.onload &#x3D; function (e) &#123;</span><br><span class="line">    let data &#x3D; JSON.parse(e.target.result);</span><br><span class="line">    &#x2F;&#x2F; 打印json数据</span><br><span class="line">    window.console.log(data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    <h2 id="Ant-Design-of-Vue-表格内使用按钮上代码"><a href="#Ant-Design-of-Vue-表格内使用按钮上代码" class="headerlink" title="Ant Design of Vue 表格内使用按钮上代码"></a>Ant Design of Vue 表格内使用按钮上代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">&lt;template&gt;</span><br><span class="line">    &lt;div&gt;</span><br><span class="line">        &lt;a-table :columns&#x3D;&quot;columns&quot; :dataSource&#x3D;&quot;data&quot; bordered rowKey&#x3D;&quot;guid&quot;&gt;</span><br><span class="line">            &lt;span slot&#x3D;&quot;action&quot; slot-scope&#x3D;&quot;text, record&quot;&gt;</span><br><span class="line">                &lt;a-button type&#x3D;&quot;primary&quot; @click&#x3D;&quot;show(record.id)&quot;&gt;查看&lt;&#x2F;a-button&gt;</span><br><span class="line">                &lt;a-divider type&#x3D;&quot;vertical&quot; &#x2F;&gt;</span><br><span class="line">                &lt;a-button type&#x3D;&quot;success&quot; @click&#x3D;&quot;edit(record.id)&quot;&gt;修改&lt;&#x2F;a-button&gt;</span><br><span class="line">                &lt;a-divider type&#x3D;&quot;vertical&quot; &#x2F;&gt;</span><br><span class="line">                &lt;a-button type&#x3D;&quot;danger&quot; @click&#x3D;&quot;del(record.id)&quot;&gt;删除&lt;&#x2F;a-button&gt;</span><br><span class="line">            &lt;&#x2F;span&gt;</span><br><span class="line">        &lt;&#x2F;a-table&gt;</span><br><span class="line">    &lt;&#x2F;div&gt;</span><br><span class="line">&lt;&#x2F;template&gt;</span><br><span class="line"></span><br><span class="line">&lt;script&gt;</span><br><span class="line">const columns &#x3D; [</span><br><span class="line">    &#123;</span><br><span class="line">        title: &#39;服务名&#39;,</span><br><span class="line">        dataIndex: &#39;name&#39;,</span><br><span class="line">        scopedSlots: &#123; customRender: &#39;name&#39; &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        title: &#39;激活状态&#39;,</span><br><span class="line">        dataIndex: &#39;isEnabled&#39;,</span><br><span class="line">        customRender: function(text, record, index) &#123;</span><br><span class="line">            return record.isEnabled ? &#39;激活&#39; : &#39;禁用&#39;;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        title: &#39;描述&#39;,</span><br><span class="line">        dataIndex: &#39;description&#39;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">        title: &#39;操作&#39;,</span><br><span class="line">        dataIndex: &#39;operation&#39;,</span><br><span class="line">        fixed: &#39;right&#39;,</span><br><span class="line">        width: 260,</span><br><span class="line">        scopedSlots: &#123; customRender: &#39;action&#39; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">];</span><br><span class="line">export default &#123;</span><br><span class="line">    data() &#123;</span><br><span class="line">        return &#123;</span><br><span class="line">            pluginId: &#39;&#39;,</span><br><span class="line">            pluginName: &#39;&#39;,</span><br><span class="line">            &#x2F;&#x2F; 表格显示</span><br><span class="line">            data: [],</span><br><span class="line">            &#x2F;&#x2F; 表格标题</span><br><span class="line">            columns,</span><br><span class="line">            targetId: &#39;&#39;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;,</span><br><span class="line">    watch: &#123;</span><br><span class="line">        $route(to, from) &#123;</span><br><span class="line">            &#x2F;&#x2F;监听路由是否变化</span><br><span class="line">            if (to.query.id !&#x3D; from.query.id) &#123;</span><br><span class="line">                this.id &#x3D; to.query.id;</span><br><span class="line">                this.pluginName &#x3D; this.$route.query.name;</span><br><span class="line">                this.init(); &#x2F;&#x2F;重新加载数据</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    mounted() &#123;</span><br><span class="line">        this.pluginId &#x3D; this.$route.query.id;</span><br><span class="line">        this.pluginName &#x3D; this.$route.query.name;</span><br><span class="line">        this.init();</span><br><span class="line">    &#125;,</span><br><span class="line">    methods: &#123;</span><br><span class="line">        init() &#123;</span><br><span class="line">            this.$http.get(&#39;service&#x2F;plugins&#x2F;services&#39;).then(res &#x3D;&gt; &#123;</span><br><span class="line">                var arr &#x3D; [];</span><br><span class="line">                let name &#x3D; this.pluginName;</span><br><span class="line">                for (let i &#x3D; 0; i &lt; res.services.length; i++) &#123;</span><br><span class="line">                    if (res.services[i].type &#x3D;&#x3D; name) &#123;</span><br><span class="line">                        arr.push(res.services[i]);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                this.data &#x3D; arr;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;,</span><br><span class="line">        &#x2F;&#x2F; 根据id获取服务信息</span><br><span class="line">        getInfoById(id) &#123;</span><br><span class="line">            for (let i &#x3D; 0; i &lt; this.data.length; i++) &#123;</span><br><span class="line">                if (this.data[i].id &#x3D;&#x3D; id) &#123;</span><br><span class="line">                    return this.data[i];</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        show(id) &#123;</span><br><span class="line">            console.log(id);</span><br><span class="line">        &#125;,</span><br><span class="line">        edit(id) &#123;</span><br><span class="line">            console.log(id);</span><br><span class="line">        &#125;,</span><br><span class="line">        del(id) &#123;</span><br><span class="line">            var info &#x3D; this.getInfoById(id);</span><br><span class="line">            this.ModalText &#x3D; &#39;您确定要删除 &#39; + info.name + &#39; 吗?&#39;;</span><br><span class="line">            this.visible &#x3D; true;</span><br><span class="line">            this.targetId &#x3D; id;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line">&lt;&#x2F;script&gt;</span><br><span class="line"></span><br><span class="line">&lt;style scoped&#x3D;&quot;scoped&quot;&gt;</span><br><span class="line">&lt;&#x2F;style&gt;</span><br></pre></td></tr></table></figure>
 
-</li>
-</ol>
-<h2 id="下载文件"><a href="#下载文件" class="headerlink" title="下载文件"></a>下载文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">let services &#x3D; &#123;&quot;key&quot;: &quot;value&quot;&#125;;</span><br><span class="line">let data &#x3D; JSON.stringify(services);</span><br><span class="line">let blob &#x3D; new Blob([data], &#123;type: &#39;text&#x2F;plain;charset&#x3D;utf-8&#39;&#125;);</span><br><span class="line">&#x2F;&#x2F; json或者txt都可以</span><br><span class="line">let fileName &#x3D; &#39;文件名.json&#39;;</span><br><span class="line">FileSaver.saveAs(blob, fileName);</span><br></pre></td></tr></table></figure>
 
     
 
@@ -260,7 +255,7 @@
 
     
     <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/">展开全文 >></a>
+      <a class="article-more-a" href="/2020/09/18/Ant%20Design%20of%20Vue%20%E8%A1%A8%E6%A0%BC%E5%86%85%E4%BD%BF%E7%94%A8%E6%8C%89%E9%92%AE/">展开全文 >></a>
     </p>
     
 
@@ -831,119 +826,19 @@
 
 
   
-    <article id="post-xml文件读取" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-vue读取json文件和下载文件" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
   <div class="article-entry" itemprop="articleBody">
     
-    <h2 id="xml文件读取-java"><a href="#xml文件读取-java" class="headerlink" title="xml文件读取```java"></a>xml文件读取```java</h2><p>package org.apache.ranger.plugin.util;</p>
-<p>import java.io.File;<br>import java.io.FileInputStream;<br>import java.io.FileNotFoundException;<br>import java.io.InputStream;<br>import java.util.Map;</p>
-<p>import javax.xml.XMLConstants;<br>import javax.xml.parsers.DocumentBuilder;<br>import javax.xml.parsers.DocumentBuilderFactory;</p>
-<p>import org.apache.log4j.Logger;<br>import org.w3c.dom.Document;<br>import org.w3c.dom.Element;<br>import org.w3c.dom.Node;<br>import org.w3c.dom.NodeList;</p>
-<p>public class XMLUtils {</p>
-<pre><code>private static final Logger LOG = Logger.getLogger(XMLUtils.class);
+    <h2 id="vue读取json文件和下载文件-读取json文件"><a href="#vue读取json文件和下载文件-读取json文件" class="headerlink" title="vue读取json文件和下载文件## 读取json文件"></a>vue读取json文件和下载文件## 读取json文件</h2><ol>
+<li>获取file文件<br> 具体步骤不说了，input上传文件或者elementUI上传文件都可以，只要拿到file对象就可以了</li>
+<li>读取内容<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">let file &#x3D; &quot;获取file文件对象&quot;;</span><br><span class="line">let reader &#x3D; new FileReader();</span><br><span class="line">reader.readAsText(file, &quot;UTF-8&quot;);</span><br><span class="line">reader.onload &#x3D; function (e) &#123;</span><br><span class="line">    let data &#x3D; JSON.parse(e.target.result);</span><br><span class="line">    &#x2F;&#x2F; 打印json数据</span><br><span class="line">    window.console.log(data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-private static final String XMLCONFIG_PROPERTY_TAGNAME = &quot;property&quot;;
-private static final String XMLCONFIG_NAME_TAGNAME = &quot;name&quot;;
-private static final String XMLCONFIG_VALUE_TAGNAME = &quot;value&quot;;
+</li>
+</ol>
+<h2 id="下载文件"><a href="#下载文件" class="headerlink" title="下载文件"></a>下载文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">let services &#x3D; &#123;&quot;key&quot;: &quot;value&quot;&#125;;</span><br><span class="line">let data &#x3D; JSON.stringify(services);</span><br><span class="line">let blob &#x3D; new Blob([data], &#123;type: &#39;text&#x2F;plain;charset&#x3D;utf-8&#39;&#125;);</span><br><span class="line">&#x2F;&#x2F; json或者txt都可以</span><br><span class="line">let fileName &#x3D; &#39;文件名.json&#39;;</span><br><span class="line">FileSaver.saveAs(blob, fileName);</span><br></pre></td></tr></table></figure>
 
-/**
- * 读取
- * @param configFileName 配置文件路径
- * @param properties 集合
- */
-public static void loadConfig(String configFileName, Map&lt;Object, Object&gt; properties) &#123;
-    try (InputStream input = getFileInputStream(configFileName)) &#123;
-        loadConfig(input, properties);
-    &#125; catch (Exception e) &#123;
-        LOG.error(&quot;Error loading : &quot;, e);
-    &#125;
-&#125;
-
-public static void loadConfig(InputStream input, Map&lt;Object, Object&gt; properties) &#123;
-    try &#123;
-        DocumentBuilderFactory xmlDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
-        xmlDocumentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        xmlDocumentBuilderFactory.setFeature(&quot;http://xml.org/sax/features/external-general-entities&quot;, false);
-                xmlDocumentBuilderFactory.setFeature(&quot;http://xml.org/sax/features/external-parameter-entities&quot;, false);
-        xmlDocumentBuilderFactory.setIgnoringComments(true);
-        xmlDocumentBuilderFactory.setNamespaceAware(true);
-
-        DocumentBuilder xmlDocumentBuilder = xmlDocumentBuilderFactory.newDocumentBuilder();
-        Document xmlDocument = xmlDocumentBuilder.parse(input);
-        xmlDocument.getDocumentElement().normalize();
-
-        NodeList nList = xmlDocument.getElementsByTagName(XMLCONFIG_PROPERTY_TAGNAME);
-
-        for (int temp = 0; temp &lt; nList.getLength(); temp++) &#123;
-
-            Node nNode = nList.item(temp);
-
-            if (nNode.getNodeType() == Node.ELEMENT_NODE) &#123;
-
-                Element eElement = (Element) nNode;
-
-                String propertyName = &quot;&quot;;
-                String propertyValue = &quot;&quot;;
-                if (eElement.getElementsByTagName(XMLCONFIG_NAME_TAGNAME).item(0) != null) &#123;
-                    propertyName = eElement.getElementsByTagName(XMLCONFIG_NAME_TAGNAME)
-                            .item(0).getTextContent().trim();
-                &#125;
-                if (eElement.getElementsByTagName(XMLCONFIG_VALUE_TAGNAME).item(0) != null) &#123;
-                    propertyValue = eElement.getElementsByTagName(XMLCONFIG_VALUE_TAGNAME)
-                            .item(0).getTextContent().trim();
-                &#125;
-
-                if (properties.get(propertyName) != null) &#123;
-                    properties.remove(propertyName);
-                &#125;
-
-                properties.put(propertyName, propertyValue);
-
-            &#125;
-        &#125;
-
-    &#125; catch (Exception e) &#123;
-        LOG.error(&quot;Error loading : &quot;, e);
-    &#125;
-&#125;
-
-private static InputStream getFileInputStream(String path) throws FileNotFoundException &#123;
-
-    InputStream ret = null;
-
-    // Guard against path traversal attacks
-    String sanitizedPath = new File(path).getName();
-    if (&quot;&quot;.equals(sanitizedPath)) &#123;
-        return null;
-    &#125;
-    File f = new File(sanitizedPath);
-
-    if (f.exists()) &#123;
-        ret = new FileInputStream(f);
-    &#125; else &#123;
-        ret = XMLUtils.class.getResourceAsStream(path);
-
-        if (ret == null) &#123;
-            if (! path.startsWith(&quot;/&quot;)) &#123;
-                ret = XMLUtils.class.getResourceAsStream(&quot;/&quot; + path);
-            &#125;
-        &#125;
-
-        if (ret == null) &#123;
-            ret = ClassLoader.getSystemClassLoader().getResourceAsStream(path);
-            if (ret == null) &#123;
-                if (! path.startsWith(&quot;/&quot;)) &#123;
-                    ret = ClassLoader.getSystemResourceAsStream(&quot;/&quot; + path);
-                &#125;
-            &#125;
-        &#125;
-    &#125;
-
-    return ret;
-&#125;</code></pre>
-<p>}</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">xml模版</span><br><span class="line">&#96;&#96;&#96;xml</span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">	&lt;property&gt;</span><br><span class="line">		&lt;name&gt;xxxxx&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;yyyy&lt;&#x2F;value&gt;</span><br><span class="line">	&lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br></pre></td></tr></table></figure>
     
 
     
@@ -958,7 +853,7 @@ private static InputStream getFileInputStream(String path) throws FileNotFoundEx
 
     
     <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">展开全文 >></a>
+      <a class="article-more-a" href="/2020/09/18/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/">展开全文 >></a>
     </p>
     
 

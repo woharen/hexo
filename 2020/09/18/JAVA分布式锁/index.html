@@ -18,8 +18,8 @@
 <meta property="og:description" content="JAVA分布式锁## zk分布式锁实现原理  客户端调用方法 服务端在zookeeper下创建临时节点并获取节点名 判断创建的节点是否为第一个节点 如果是，则拥有锁，使用完后释放锁 如果不是，等待监听其他节点释放。  redis分布式锁实现原理单个redis实例 加锁  服务端获取到唯一的value值，即能代表自己唯一身份的特征  set值到redis中，如果值key不存在就插入并且设定好过期时间">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://img-blog.csdnimg.cn/20181026092826685.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2xvdmV4aWFvdGFvemk=,size_27,color_FFFFFF,t_70">
-<meta property="article:published_time" content="2020-09-18T06:32:25.277Z">
-<meta property="article:modified_time" content="2020-09-18T06:32:25.277Z">
+<meta property="article:published_time" content="2020-09-18T06:34:48.204Z">
+<meta property="article:modified_time" content="2020-09-18T06:34:48.204Z">
 <meta property="article:author" content="VinhoJiang">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://img-blog.csdnimg.cn/20181026092826685.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2xvdmV4aWFvdGFvemk=,size_27,color_FFFFFF,t_70">
