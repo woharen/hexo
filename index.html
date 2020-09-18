@@ -172,28 +172,119 @@
             
 
   
-    <article id="post-idea自用插件" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-xml文件读取" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
   <div class="article-entry" itemprop="articleBody">
     
-    <h2 id="idea自用插件-开发"><a href="#idea自用插件-开发" class="headerlink" title="idea自用插件## 开发"></a>idea自用插件## 开发</h2><ul>
-<li>Alibaba Java Coding Guidelines 阿里巴巴代码规范</li>
-<li>Free MyBatis plugin 免费的Mybatis插件,可以快速在mapper文件和java代码中切换。</li>
-<li>Lombok 编制自动生成get，set方法</li>
-<li>ignore 用来设置git提交时需要过滤的文件</li>
-<li>Maven Helper  一键查看maven依赖，查看冲突的依赖，一键进行exclude依赖</li>
-<li>gitee  码云上传代码</li>
-<li>JRebel 代码热部署</li>
-</ul>
-<h2 id="辅助"><a href="#辅助" class="headerlink" title="辅助"></a>辅助</h2><ul>
-<li>Drumroll 在编译/构建时播放鼓声音。当构建有错误或警告时，以及其他同样有趣的声音。</li>
-<li>key-promoter-x 快捷键提示</li>
-<li>Nyan progress bar 加载进度条</li>
-<li>grep-console 多颜色调试日志</li>
-<li>Translation 界面翻译</li>
-</ul>
+    <h2 id="xml文件读取-java"><a href="#xml文件读取-java" class="headerlink" title="xml文件读取```java"></a>xml文件读取```java</h2><p>package org.apache.ranger.plugin.util;</p>
+<p>import java.io.File;<br>import java.io.FileInputStream;<br>import java.io.FileNotFoundException;<br>import java.io.InputStream;<br>import java.util.Map;</p>
+<p>import javax.xml.XMLConstants;<br>import javax.xml.parsers.DocumentBuilder;<br>import javax.xml.parsers.DocumentBuilderFactory;</p>
+<p>import org.apache.log4j.Logger;<br>import org.w3c.dom.Document;<br>import org.w3c.dom.Element;<br>import org.w3c.dom.Node;<br>import org.w3c.dom.NodeList;</p>
+<p>public class XMLUtils {</p>
+<pre><code>private static final Logger LOG = Logger.getLogger(XMLUtils.class);
 
+private static final String XMLCONFIG_PROPERTY_TAGNAME = &quot;property&quot;;
+private static final String XMLCONFIG_NAME_TAGNAME = &quot;name&quot;;
+private static final String XMLCONFIG_VALUE_TAGNAME = &quot;value&quot;;
+
+/**
+ * 读取
+ * @param configFileName 配置文件路径
+ * @param properties 集合
+ */
+public static void loadConfig(String configFileName, Map&lt;Object, Object&gt; properties) &#123;
+    try (InputStream input = getFileInputStream(configFileName)) &#123;
+        loadConfig(input, properties);
+    &#125; catch (Exception e) &#123;
+        LOG.error(&quot;Error loading : &quot;, e);
+    &#125;
+&#125;
+
+public static void loadConfig(InputStream input, Map&lt;Object, Object&gt; properties) &#123;
+    try &#123;
+        DocumentBuilderFactory xmlDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
+        xmlDocumentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        xmlDocumentBuilderFactory.setFeature(&quot;http://xml.org/sax/features/external-general-entities&quot;, false);
+                xmlDocumentBuilderFactory.setFeature(&quot;http://xml.org/sax/features/external-parameter-entities&quot;, false);
+        xmlDocumentBuilderFactory.setIgnoringComments(true);
+        xmlDocumentBuilderFactory.setNamespaceAware(true);
+
+        DocumentBuilder xmlDocumentBuilder = xmlDocumentBuilderFactory.newDocumentBuilder();
+        Document xmlDocument = xmlDocumentBuilder.parse(input);
+        xmlDocument.getDocumentElement().normalize();
+
+        NodeList nList = xmlDocument.getElementsByTagName(XMLCONFIG_PROPERTY_TAGNAME);
+
+        for (int temp = 0; temp &lt; nList.getLength(); temp++) &#123;
+
+            Node nNode = nList.item(temp);
+
+            if (nNode.getNodeType() == Node.ELEMENT_NODE) &#123;
+
+                Element eElement = (Element) nNode;
+
+                String propertyName = &quot;&quot;;
+                String propertyValue = &quot;&quot;;
+                if (eElement.getElementsByTagName(XMLCONFIG_NAME_TAGNAME).item(0) != null) &#123;
+                    propertyName = eElement.getElementsByTagName(XMLCONFIG_NAME_TAGNAME)
+                            .item(0).getTextContent().trim();
+                &#125;
+                if (eElement.getElementsByTagName(XMLCONFIG_VALUE_TAGNAME).item(0) != null) &#123;
+                    propertyValue = eElement.getElementsByTagName(XMLCONFIG_VALUE_TAGNAME)
+                            .item(0).getTextContent().trim();
+                &#125;
+
+                if (properties.get(propertyName) != null) &#123;
+                    properties.remove(propertyName);
+                &#125;
+
+                properties.put(propertyName, propertyValue);
+
+            &#125;
+        &#125;
+
+    &#125; catch (Exception e) &#123;
+        LOG.error(&quot;Error loading : &quot;, e);
+    &#125;
+&#125;
+
+private static InputStream getFileInputStream(String path) throws FileNotFoundException &#123;
+
+    InputStream ret = null;
+
+    // Guard against path traversal attacks
+    String sanitizedPath = new File(path).getName();
+    if (&quot;&quot;.equals(sanitizedPath)) &#123;
+        return null;
+    &#125;
+    File f = new File(sanitizedPath);
+
+    if (f.exists()) &#123;
+        ret = new FileInputStream(f);
+    &#125; else &#123;
+        ret = XMLUtils.class.getResourceAsStream(path);
+
+        if (ret == null) &#123;
+            if (! path.startsWith(&quot;/&quot;)) &#123;
+                ret = XMLUtils.class.getResourceAsStream(&quot;/&quot; + path);
+            &#125;
+        &#125;
+
+        if (ret == null) &#123;
+            ret = ClassLoader.getSystemClassLoader().getResourceAsStream(path);
+            if (ret == null) &#123;
+                if (! path.startsWith(&quot;/&quot;)) &#123;
+                    ret = ClassLoader.getSystemResourceAsStream(&quot;/&quot; + path);
+                &#125;
+            &#125;
+        &#125;
+    &#125;
+
+    return ret;
+&#125;</code></pre>
+<p>}</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">xml模版</span><br><span class="line">&#96;&#96;&#96;xml</span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">	&lt;property&gt;</span><br><span class="line">		&lt;name&gt;xxxxx&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;yyyy&lt;&#x2F;value&gt;</span><br><span class="line">	&lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br></pre></td></tr></table></figure>
     
 
     
@@ -208,410 +299,7 @@
 
     
     <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/">展开全文 >></a>
-    </p>
-    
-
-    
-    <div class="clearfix"></div>
-  </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-java通过Sigar获取服务器信息" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-  <div class="article-entry" itemprop="articleBody">
-    
-    <h2 id="java通过Sigar获取服务器信息-介绍"><a href="#java通过Sigar获取服务器信息-介绍" class="headerlink" title="java通过Sigar获取服务器信息## 介绍"></a>java通过Sigar获取服务器信息## 介绍</h2><p>今天在开发过程中遇到个问题，怎么在JAVA中获取到服务器信息?<br>经过寻找，终于找到了，那就是<code>Sigar</code>,那么什么是<code>Sigar</code>呢？</p>
-<blockquote>
-<p>Sigar<br>Sigar是Hyperic-hq产品的基础包,是HypericHQ主要的数据收集组件。它用来从许多平台收集系统和处理信息.<br>这些平台包括：Linux,Windows, Solaris, AIX, HP-UX, FreeBSD and Mac OSX.<br>Sigar有C，C#，Java和PerlAPI，java版的API为sigar.jarsigar.jar的底层是用C语言编写的，它通过本地方法来调用操作系统API来获取系统相关数据。<br>Windows操作系统下Sigar.jar依赖sigar-amd64-winnt.dll或sigar-x86-winnt.dll，linux操作系统下则依赖libsigar-amd64-linux.so或libsigar-x86-linux.so</p>
-</blockquote>
-<p>能获取的信息有：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">CPU信息：包括基本信息（vendor、model、mhz、cacheSize）和统计信息（user、sys、idle、nice、wait）</span><br><span class="line">文件系统信息：包括Filesystem、Size、Used、Avail、Use%、Type</span><br><span class="line">事件信息：类似Service Control Manager</span><br><span class="line">内存信息：物理内存和交换内存的总数、使用数、剩余数；RAM的大小</span><br><span class="line">网络信息：包括网络接口信息和网络路由信息</span><br><span class="line">进程信息：包括每个进程的内存、CPU占用数、状态、参数、句柄</span><br><span class="line">IO信息：包括IO的状态，读写大小等</span><br><span class="line">服务状态信息</span><br><span class="line">系统信息：包括操作系统版本，系统资源限制情况，系统运行时间以及负载，JAVA的版本信息等</span><br></pre></td></tr></table></figure>
-
-<p><a target="_blank" rel="noopener" href="http://www.hyperic.com/">Hyperic-hq官方网站</a></p>
-<p><a target="_blank" rel="noopener" href="http://sigar.hyperic.com/">官网Sigar.jar下载地址</a></p>
-<p><a target="_blank" rel="noopener" href="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/hyperic-sigar-1.6.4_1575944915413.zip">本站下载（推荐）</a></p>
-<h2 id="依赖"><a href="#依赖" class="headerlink" title="依赖"></a>依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;org.hyperic&lt;&#x2F;groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;sigar&lt;&#x2F;artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.6.4&lt;&#x2F;version&gt;</span><br><span class="line">&lt;&#x2F;dependency&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="注意！！！！"><a href="#注意！！！！" class="headerlink" title="注意！！！！"></a>注意！！！！</h2><p>需要将基本库文件放到jdk的bin目录下，不放运行会抛异常。</p>
-<p>linux查看jdk目录</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmd -- java -verbose</span><br></pre></td></tr></table></figure>
-
-<p>比如在<strong>windows环境下</strong>是以下文件</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sigar-amd64-winnt.dll</span><br><span class="line">sigar-x86-winnt.dll</span><br><span class="line">sigar-x86-winnt.lib</span><br></pre></td></tr></table></figure>
-
-<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br></pre></td><td class="code"><pre><span class="line">package com.meihao1104.rainbow.utils;</span><br><span class="line"></span><br><span class="line">import java.net.InetAddress;</span><br><span class="line">import java.net.UnknownHostException;</span><br><span class="line">import java.util.Map;</span><br><span class="line">import java.util.Properties;</span><br><span class="line">import org.hyperic.sigar.CpuInfo;</span><br><span class="line">import org.hyperic.sigar.CpuPerc;</span><br><span class="line">import org.hyperic.sigar.FileSystem;</span><br><span class="line">import org.hyperic.sigar.FileSystemUsage;</span><br><span class="line">import org.hyperic.sigar.Mem;</span><br><span class="line">import org.hyperic.sigar.NetFlags;</span><br><span class="line">import org.hyperic.sigar.NetInterfaceConfig;</span><br><span class="line">import org.hyperic.sigar.NetInterfaceStat;</span><br><span class="line">import org.hyperic.sigar.OperatingSystem;</span><br><span class="line">import org.hyperic.sigar.Sigar;</span><br><span class="line">import org.hyperic.sigar.SigarException;</span><br><span class="line">import org.hyperic.sigar.Swap;</span><br><span class="line">import org.hyperic.sigar.Who;</span><br><span class="line"> </span><br><span class="line">public class RuntimeTest &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            &#x2F;&#x2F; System信息，从jvm获取</span><br><span class="line">            property();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; cpu信息</span><br><span class="line">            cpu();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 内存信息</span><br><span class="line">            memory();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 操作系统信息</span><br><span class="line">            os();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 用户信息</span><br><span class="line">            who();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 文件系统信息</span><br><span class="line">            file();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 网络信息</span><br><span class="line">            net();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">            &#x2F;&#x2F; 以太网信息</span><br><span class="line">            ethernet();</span><br><span class="line">            System.out.println(&quot;----------------------------------&quot;);</span><br><span class="line">        &#125; catch (Exception e1) &#123;</span><br><span class="line">            e1.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void property() throws UnknownHostException &#123;</span><br><span class="line">        Runtime r &#x3D; Runtime.getRuntime();</span><br><span class="line">        Properties props &#x3D; System.getProperties();</span><br><span class="line">        InetAddress addr;</span><br><span class="line">        addr &#x3D; InetAddress.getLocalHost();</span><br><span class="line">        String ip &#x3D; addr.getHostAddress();</span><br><span class="line">        Map&lt;String, String&gt; map &#x3D; System.getenv();</span><br><span class="line">        String userName &#x3D; map.get(&quot;USERNAME&quot;);&#x2F;&#x2F; 获取用户名</span><br><span class="line">        String computerName &#x3D; map.get(&quot;COMPUTERNAME&quot;);&#x2F;&#x2F; 获取计算机名</span><br><span class="line">        String userDomain &#x3D; map.get(&quot;USERDOMAIN&quot;);&#x2F;&#x2F; 获取计算机域名</span><br><span class="line">        System.out.println(&quot;用户名:    &quot; + userName);</span><br><span class="line">        System.out.println(&quot;计算机名:    &quot; + computerName);</span><br><span class="line">        System.out.println(&quot;计算机域名:    &quot; + userDomain);</span><br><span class="line">        System.out.println(&quot;本地ip地址:    &quot; + ip);</span><br><span class="line">        System.out.println(&quot;本地主机名:    &quot; + addr.getHostName());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的总内存:    &quot; + r.totalMemory());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的剩余内存:    &quot; + r.freeMemory());</span><br><span class="line">        System.out.println(&quot;JVM可以使用的处理器个数:    &quot; + r.availableProcessors());</span><br><span class="line">        System.out.println(&quot;Java的运行环境版本：    &quot; + props.getProperty(&quot;java.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的运行环境供应商：    &quot; + props.getProperty(&quot;java.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java供应商的URL：    &quot; + props.getProperty(&quot;java.vendor.url&quot;));</span><br><span class="line">        System.out.println(&quot;Java的安装路径：    &quot; + props.getProperty(&quot;java.home&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范版本：    &quot; + props.getProperty(&quot;java.vm.specification.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范供应商：    &quot; + props.getProperty(&quot;java.vm.specification.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机规范名称：    &quot; + props.getProperty(&quot;java.vm.specification.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现版本：    &quot; + props.getProperty(&quot;java.vm.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现供应商：    &quot; + props.getProperty(&quot;java.vm.vendor&quot;));</span><br><span class="line">        System.out.println(&quot;Java的虚拟机实现名称：    &quot; + props.getProperty(&quot;java.vm.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范版本：    &quot; + props.getProperty(&quot;java.specification.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范供应商：    &quot; + props.getProperty(&quot;java.specification.vender&quot;));</span><br><span class="line">        System.out.println(&quot;Java运行时环境规范名称：    &quot; + props.getProperty(&quot;java.specification.name&quot;));</span><br><span class="line">        System.out.println(&quot;Java的类格式版本号：    &quot; + props.getProperty(&quot;java.class.version&quot;));</span><br><span class="line">        System.out.println(&quot;Java的类路径：    &quot; + props.getProperty(&quot;java.class.path&quot;));</span><br><span class="line">        System.out.println(&quot;加载库时搜索的路径列表：    &quot; + props.getProperty(&quot;java.library.path&quot;));</span><br><span class="line">        System.out.println(&quot;默认的临时文件路径：    &quot; + props.getProperty(&quot;java.io.tmpdir&quot;));</span><br><span class="line">        System.out.println(&quot;一个或多个扩展目录的路径：    &quot; + props.getProperty(&quot;java.ext.dirs&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的名称：    &quot; + props.getProperty(&quot;os.name&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的构架：    &quot; + props.getProperty(&quot;os.arch&quot;));</span><br><span class="line">        System.out.println(&quot;操作系统的版本：    &quot; + props.getProperty(&quot;os.version&quot;));</span><br><span class="line">        System.out.println(&quot;文件分隔符：    &quot; + props.getProperty(&quot;file.separator&quot;));</span><br><span class="line">        System.out.println(&quot;路径分隔符：    &quot; + props.getProperty(&quot;path.separator&quot;));</span><br><span class="line">        System.out.println(&quot;行分隔符：    &quot; + props.getProperty(&quot;line.separator&quot;));</span><br><span class="line">        System.out.println(&quot;用户的账户名称：    &quot; + props.getProperty(&quot;user.name&quot;));</span><br><span class="line">        System.out.println(&quot;用户的主目录：    &quot; + props.getProperty(&quot;user.home&quot;));</span><br><span class="line">        System.out.println(&quot;用户的当前工作目录：    &quot; + props.getProperty(&quot;user.dir&quot;));</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void memory() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        Mem mem &#x3D; sigar.getMem();</span><br><span class="line">        &#x2F;&#x2F; 内存总量</span><br><span class="line">        System.out.println(&quot;内存总量:    &quot; + mem.getTotal() &#x2F; 1024L + &quot;K av&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前内存使用量</span><br><span class="line">        System.out.println(&quot;当前内存使用量:    &quot; + mem.getUsed() &#x2F; 1024L + &quot;K used&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前内存剩余量</span><br><span class="line">        System.out.println(&quot;当前内存剩余量:    &quot; + mem.getFree() &#x2F; 1024L + &quot;K free&quot;);</span><br><span class="line">        Swap swap &#x3D; sigar.getSwap();</span><br><span class="line">        &#x2F;&#x2F; 交换区总量</span><br><span class="line">        System.out.println(&quot;交换区总量:    &quot; + swap.getTotal() &#x2F; 1024L + &quot;K av&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前交换区使用量</span><br><span class="line">        System.out.println(&quot;当前交换区使用量:    &quot; + swap.getUsed() &#x2F; 1024L + &quot;K used&quot;);</span><br><span class="line">        &#x2F;&#x2F; 当前交换区剩余量</span><br><span class="line">        System.out.println(&quot;当前交换区剩余量:    &quot; + swap.getFree() &#x2F; 1024L + &quot;K free&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void cpu() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        CpuInfo infos[] &#x3D; sigar.getCpuInfoList();</span><br><span class="line">        CpuPerc cpuList[] &#x3D; null;</span><br><span class="line">        cpuList &#x3D; sigar.getCpuPercList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; infos.length; i++) &#123;&#x2F;&#x2F; 不管是单块CPU还是多CPU都适用</span><br><span class="line">            CpuInfo info &#x3D; infos[i];</span><br><span class="line">            System.out.println(&quot;第&quot; + (i + 1) + &quot;块CPU信息&quot;);</span><br><span class="line">            System.out.println(&quot;CPU的总量MHz:    &quot; + info.getMhz());&#x2F;&#x2F; CPU的总量MHz</span><br><span class="line">            System.out.println(&quot;CPU生产商:    &quot; + info.getVendor());&#x2F;&#x2F; 获得CPU的卖主，如：Intel</span><br><span class="line">            System.out.println(&quot;CPU类别:    &quot; + info.getModel());&#x2F;&#x2F; 获得CPU的类别，如：Celeron</span><br><span class="line">            System.out.println(&quot;CPU缓存数量:    &quot; + info.getCacheSize());&#x2F;&#x2F; 缓冲存储器数量</span><br><span class="line">            printCpuPerc(cpuList[i]);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void printCpuPerc(CpuPerc cpu) &#123;</span><br><span class="line">        System.out.println(&quot;CPU用户使用率:    &quot; + CpuPerc.format(cpu.getUser()));&#x2F;&#x2F; 用户使用率</span><br><span class="line">        System.out.println(&quot;CPU系统使用率:    &quot; + CpuPerc.format(cpu.getSys()));&#x2F;&#x2F; 系统使用率</span><br><span class="line">        System.out.println(&quot;CPU当前等待率:    &quot; + CpuPerc.format(cpu.getWait()));&#x2F;&#x2F; 当前等待率</span><br><span class="line">        System.out.println(&quot;CPU当前错误率:    &quot; + CpuPerc.format(cpu.getNice()));&#x2F;&#x2F;</span><br><span class="line">        System.out.println(&quot;CPU当前空闲率:    &quot; + CpuPerc.format(cpu.getIdle()));&#x2F;&#x2F; 当前空闲率</span><br><span class="line">        System.out.println(&quot;CPU总的使用率:    &quot; + CpuPerc.format(cpu.getCombined()));&#x2F;&#x2F; 总的使用率</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void os() &#123;</span><br><span class="line">        OperatingSystem OS &#x3D; OperatingSystem.getInstance();</span><br><span class="line">        &#x2F;&#x2F; 操作系统内核类型如： 386、486、586等x86</span><br><span class="line">        System.out.println(&quot;操作系统:    &quot; + OS.getArch());</span><br><span class="line">        System.out.println(&quot;操作系统CpuEndian():    &quot; + OS.getCpuEndian());&#x2F;&#x2F;</span><br><span class="line">        System.out.println(&quot;操作系统DataModel():    &quot; + OS.getDataModel());&#x2F;&#x2F;</span><br><span class="line">        &#x2F;&#x2F; 系统描述</span><br><span class="line">        System.out.println(&quot;操作系统的描述:    &quot; + OS.getDescription());</span><br><span class="line">        &#x2F;&#x2F; 操作系统类型</span><br><span class="line">        &#x2F;&#x2F; System.out.println(&quot;OS.getName():    &quot; + OS.getName());</span><br><span class="line">        &#x2F;&#x2F; System.out.println(&quot;OS.getPatchLevel():    &quot; + OS.getPatchLevel());&#x2F;&#x2F;</span><br><span class="line">        &#x2F;&#x2F; 操作系统的卖主</span><br><span class="line">        System.out.println(&quot;操作系统的卖主:    &quot; + OS.getVendor());</span><br><span class="line">        &#x2F;&#x2F; 卖主名称</span><br><span class="line">        System.out.println(&quot;操作系统的卖主名:    &quot; + OS.getVendorCodeName());</span><br><span class="line">        &#x2F;&#x2F; 操作系统名称</span><br><span class="line">        System.out.println(&quot;操作系统名称:    &quot; + OS.getVendorName());</span><br><span class="line">        &#x2F;&#x2F; 操作系统卖主类型</span><br><span class="line">        System.out.println(&quot;操作系统卖主类型:    &quot; + OS.getVendorVersion());</span><br><span class="line">        &#x2F;&#x2F; 操作系统的版本号</span><br><span class="line">        System.out.println(&quot;操作系统的版本号:    &quot; + OS.getVersion());</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void who() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        Who who[] &#x3D; sigar.getWhoList();</span><br><span class="line">        if (who !&#x3D; null &amp;&amp; who.length &gt; 0) &#123;</span><br><span class="line">            for (int i &#x3D; 0; i &lt; who.length; i++) &#123;</span><br><span class="line">                &#x2F;&#x2F; System.out.println(&quot;当前系统进程表中的用户名&quot; + String.valueOf(i));</span><br><span class="line">                Who _who &#x3D; who[i];</span><br><span class="line">                System.out.println(&quot;用户控制台:    &quot; + _who.getDevice());</span><br><span class="line">                System.out.println(&quot;用户host:    &quot; + _who.getHost());</span><br><span class="line">                &#x2F;&#x2F; System.out.println(&quot;getTime():    &quot; + _who.getTime());</span><br><span class="line">                &#x2F;&#x2F; 当前系统进程表中的用户名</span><br><span class="line">                System.out.println(&quot;当前系统进程表中的用户名:    &quot; + _who.getUser());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void file() throws Exception &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        FileSystem fslist[] &#x3D; sigar.getFileSystemList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; fslist.length; i++) &#123;</span><br><span class="line">            System.out.println(&quot;分区的盘符名称&quot; + i);</span><br><span class="line">            FileSystem fs &#x3D; fslist[i];</span><br><span class="line">            &#x2F;&#x2F; 分区的盘符名称</span><br><span class="line">            System.out.println(&quot;盘符名称:    &quot; + fs.getDevName());</span><br><span class="line">            &#x2F;&#x2F; 分区的盘符名称</span><br><span class="line">            System.out.println(&quot;盘符路径:    &quot; + fs.getDirName());</span><br><span class="line">            System.out.println(&quot;盘符标志:    &quot; + fs.getFlags());&#x2F;&#x2F;</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型，比如 FAT32、NTFS</span><br><span class="line">            System.out.println(&quot;盘符类型:    &quot; + fs.getSysTypeName());</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型名，比如本地硬盘、光驱、网络文件系统等</span><br><span class="line">            System.out.println(&quot;盘符类型名:    &quot; + fs.getTypeName());</span><br><span class="line">            &#x2F;&#x2F; 文件系统类型</span><br><span class="line">            System.out.println(&quot;盘符文件系统类型:    &quot; + fs.getType());</span><br><span class="line">            FileSystemUsage usage &#x3D; null;</span><br><span class="line">            usage &#x3D; sigar.getFileSystemUsage(fs.getDirName());</span><br><span class="line">            switch (fs.getType()) &#123;</span><br><span class="line">            case 0: &#x2F;&#x2F; TYPE_UNKNOWN ：未知</span><br><span class="line">                break;</span><br><span class="line">            case 1: &#x2F;&#x2F; TYPE_NONE</span><br><span class="line">                break;</span><br><span class="line">            case 2: &#x2F;&#x2F; TYPE_LOCAL_DISK : 本地硬盘</span><br><span class="line">                &#x2F;&#x2F; 文件系统总大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;总大小:    &quot; + usage.getTotal() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统剩余大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;剩余大小:    &quot; + usage.getFree() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统可用大小</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;可用大小:    &quot; + usage.getAvail() + &quot;KB&quot;);</span><br><span class="line">                &#x2F;&#x2F; 文件系统已经使用量</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;已经使用量:    &quot; + usage.getUsed() + &quot;KB&quot;);</span><br><span class="line">                double usePercent &#x3D; usage.getUsePercent() * 100D;</span><br><span class="line">                &#x2F;&#x2F; 文件系统资源的利用率</span><br><span class="line">                System.out.println(fs.getDevName() + &quot;资源的利用率:    &quot; + usePercent + &quot;%&quot;);</span><br><span class="line">                break;</span><br><span class="line">            case 3:&#x2F;&#x2F; TYPE_NETWORK ：网络</span><br><span class="line">                break;</span><br><span class="line">            case 4:&#x2F;&#x2F; TYPE_RAM_DISK ：闪存</span><br><span class="line">                break;</span><br><span class="line">            case 5:&#x2F;&#x2F; TYPE_CDROM ：光驱</span><br><span class="line">                break;</span><br><span class="line">            case 6:&#x2F;&#x2F; TYPE_SWAP ：页面交换</span><br><span class="line">                break;</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(fs.getDevName() + &quot;读出：    &quot; + usage.getDiskReads());</span><br><span class="line">            System.out.println(fs.getDevName() + &quot;写入：    &quot; + usage.getDiskWrites());</span><br><span class="line">        &#125;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void net() throws Exception &#123;</span><br><span class="line">        Sigar sigar &#x3D; new Sigar();</span><br><span class="line">        String ifNames[] &#x3D; sigar.getNetInterfaceList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; ifNames.length; i++) &#123;</span><br><span class="line">            String name &#x3D; ifNames[i];</span><br><span class="line">            NetInterfaceConfig ifconfig &#x3D; sigar.getNetInterfaceConfig(name);</span><br><span class="line">            System.out.println(&quot;网络设备名:    &quot; + name);&#x2F;&#x2F; 网络设备名</span><br><span class="line">            System.out.println(&quot;IP地址:    &quot; + ifconfig.getAddress());&#x2F;&#x2F; IP地址</span><br><span class="line">            System.out.println(&quot;子网掩码:    &quot; + ifconfig.getNetmask());&#x2F;&#x2F; 子网掩码</span><br><span class="line">            if ((ifconfig.getFlags() &amp; 1L) &lt;&#x3D; 0L) &#123;</span><br><span class="line">                System.out.println(&quot;!IFF_UP...skipping getNetInterfaceStat&quot;);</span><br><span class="line">                continue;</span><br><span class="line">            &#125;</span><br><span class="line">            NetInterfaceStat ifstat &#x3D; sigar.getNetInterfaceStat(name);</span><br><span class="line">            System.out.println(name + &quot;接收的总包裹数:&quot; + ifstat.getRxPackets());&#x2F;&#x2F; 接收的总包裹数</span><br><span class="line">            System.out.println(name + &quot;发送的总包裹数:&quot; + ifstat.getTxPackets());&#x2F;&#x2F; 发送的总包裹数</span><br><span class="line">            System.out.println(name + &quot;接收到的总字节数:&quot; + ifstat.getRxBytes());&#x2F;&#x2F; 接收到的总字节数</span><br><span class="line">            System.out.println(name + &quot;发送的总字节数:&quot; + ifstat.getTxBytes());&#x2F;&#x2F; 发送的总字节数</span><br><span class="line">            System.out.println(name + &quot;接收到的错误包数:&quot; + ifstat.getRxErrors());&#x2F;&#x2F; 接收到的错误包数</span><br><span class="line">            System.out.println(name + &quot;发送数据包时的错误数:&quot; + ifstat.getTxErrors());&#x2F;&#x2F; 发送数据包时的错误数</span><br><span class="line">            System.out.println(name + &quot;接收时丢弃的包数:&quot; + ifstat.getRxDropped());&#x2F;&#x2F; 接收时丢弃的包数</span><br><span class="line">            System.out.println(name + &quot;发送时丢弃的包数:&quot; + ifstat.getTxDropped());&#x2F;&#x2F; 发送时丢弃的包数</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    private static void ethernet() throws SigarException &#123;</span><br><span class="line">        Sigar sigar &#x3D; null;</span><br><span class="line">        sigar &#x3D; new Sigar();</span><br><span class="line">        String[] ifaces &#x3D; sigar.getNetInterfaceList();</span><br><span class="line">        for (int i &#x3D; 0; i &lt; ifaces.length; i++) &#123;</span><br><span class="line">            NetInterfaceConfig cfg &#x3D; sigar.getNetInterfaceConfig(ifaces[i]);</span><br><span class="line">            if (NetFlags.LOOPBACK_ADDRESS.equals(cfg.getAddress()) || (cfg.getFlags() &amp; NetFlags.IFF_LOOPBACK) !&#x3D; 0</span><br><span class="line">                    || NetFlags.NULL_HWADDR.equals(cfg.getHwaddr())) &#123;</span><br><span class="line">                continue;</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(cfg.getName() + &quot;IP地址:&quot; + cfg.getAddress());&#x2F;&#x2F; IP地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网关广播地址:&quot; + cfg.getBroadcast());&#x2F;&#x2F; 网关广播地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡MAC地址:&quot; + cfg.getHwaddr());&#x2F;&#x2F; 网卡MAC地址</span><br><span class="line">            System.out.println(cfg.getName() + &quot;子网掩码:&quot; + cfg.getNetmask());&#x2F;&#x2F; 子网掩码</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡描述信息:&quot; + cfg.getDescription());&#x2F;&#x2F; 网卡描述信息</span><br><span class="line">            System.out.println(cfg.getName() + &quot;网卡类型&quot; + cfg.getType());&#x2F;&#x2F;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-    
-
-    
-
-    
-
-  </div>
-  <div class="article-info article-info-index">
-    
-    
-    
-
-    
-    <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">展开全文 >></a>
-    </p>
-    
-
-    
-    <div class="clearfix"></div>
-  </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-JAVA分布式锁" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-  <div class="article-entry" itemprop="articleBody">
-    
-    <h2 id="JAVA分布式锁-zk分布式锁实现原理"><a href="#JAVA分布式锁-zk分布式锁实现原理" class="headerlink" title="JAVA分布式锁## zk分布式锁实现原理"></a>JAVA分布式锁## zk分布式锁实现原理</h2><p><img src="https://img-blog.csdnimg.cn/20181026092826685.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2xvdmV4aWFvdGFvemk=,size_27,color_FFFFFF,t_70" alt="zk分布式锁流程图"></p>
-<ol>
-<li>客户端调用方法</li>
-<li>服务端在zookeeper下创建临时节点并获取节点名</li>
-<li>判断创建的节点是否为第一个节点</li>
-<li>如果是，则拥有锁，使用完后释放锁</li>
-<li>如果不是，等待监听其他节点释放。</li>
-</ol>
-<h2 id="redis分布式锁实现原理"><a href="#redis分布式锁实现原理" class="headerlink" title="redis分布式锁实现原理"></a>redis分布式锁实现原理</h2><h3 id="单个redis实例"><a href="#单个redis实例" class="headerlink" title="单个redis实例"></a>单个redis实例</h3><ul>
-<li><p><strong>加锁</strong></p>
-<ol>
-<li><p>服务端获取到唯一的value值，即能代表自己唯一身份的特征</p>
-</li>
-<li><p>set值到redis中，如果值key不存在就插入并且设定好过期时间。</p>
-</li>
-</ol>
-<p>代码:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisTool</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String LOCK_SUCCESS = <span class="string">&quot;OK&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String SET_IF_NOT_EXIST = <span class="string">&quot;NX&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String SET_WITH_EXPIRE_TIME = <span class="string">&quot;PX&quot;</span>;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 尝试获取分布式锁</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> jedis Redis客户端</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> lockKey 锁</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requestId 请求标识</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> expireTime 超期时间</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> 是否获取成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">tryGetDistributedLock</span><span class="params">(Jedis jedis, String lockKey, String requestId, <span class="keyword">int</span> expireTime)</span> </span>&#123;</span><br><span class="line">        String result = jedis.set(lockKey, requestId, SET_IF_NOT_EXIST, SET_WITH_EXPIRE_TIME, expireTime);</span><br><span class="line">        <span class="keyword">if</span> (LOCK_SUCCESS.equals(result)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p><strong>解锁</strong></p>
-<ol>
-<li>首先获取锁对应的value值</li>
-<li>检查是否与requestId相等</li>
-<li>如果相等则删除锁（解锁）。</li>
-<li>要确保上述操作是原子性的。</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisTool</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Long RELEASE_SUCCESS = <span class="number">1L</span>;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 释放分布式锁</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> jedis Redis客户端</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> lockKey 锁</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requestId 请求标识</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> 是否释放成功</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">releaseDistributedLock</span><span class="params">(Jedis jedis, String lockKey, String requestId)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        String script = <span class="string">&quot;if redis.call(&#x27;get&#x27;, KEYS[1]) == ARGV[1] then return redis.call(&#x27;del&#x27;, KEYS[1]) else return 0 end&quot;</span>;</span><br><span class="line">        Object result = jedis.eval(script, Collections.singletonList(lockKey), Collections.singletonList(requestId));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (RELEASE_SUCCESS.equals(result)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-</li>
-</ul>
-<h4 id="疑问点："><a href="#疑问点：" class="headerlink" title="疑问点："></a>疑问点：</h4><p><strong>如果设置锁之后再设置过期时间会怎么样?</strong></p>
-<p>​    有可能在获取锁之后服务挂掉，导致过期时间还未设置，结果锁一直不释放。</p>
-<p><strong>使用<code>jedis.setnx()</code>命令实现加锁，其中key是锁，value是锁的过期时间。有可能导致的问题</strong></p>
-<p>执行过程：</p>
-<ol>
-<li>通过setnx()方法尝试加锁，如果当前锁不存在，返回加锁成功。</li>
-<li>如果锁已经存在则获取锁的过期时间，和当前时间比较，如果锁已经过期，则设置新的过期时间，返回加锁成功。</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">wrongGetLock2</span><span class="params">(Jedis jedis, String lockKey, <span class="keyword">int</span> expireTime)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">long</span> expires = System.currentTimeMillis() + expireTime;</span><br><span class="line">    String expiresStr = String.valueOf(expires);</span><br><span class="line">    <span class="comment">// 如果当前锁不存在，返回加锁成功</span></span><br><span class="line">    <span class="keyword">if</span> (jedis.setnx(lockKey, expiresStr) == <span class="number">1</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 如果锁存在，获取锁的过期时间</span></span><br><span class="line">    String currentValueStr = jedis.get(lockKey);</span><br><span class="line">    <span class="keyword">if</span> (currentValueStr != <span class="keyword">null</span> &amp;&amp; Long.parseLong(currentValueStr) &lt; System.currentTimeMillis()) &#123;</span><br><span class="line">        <span class="comment">// 锁已过期，获取上一个锁的过期时间，并设置现在锁的过期时间</span></span><br><span class="line">        String oldValueStr = jedis.getSet(lockKey, expiresStr);</span><br><span class="line">        <span class="keyword">if</span> (oldValueStr != <span class="keyword">null</span> &amp;&amp; oldValueStr.equals(currentValueStr)) &#123;</span><br><span class="line">            <span class="comment">// 考虑多线程并发的情况，只有一个线程的设置值和当前值相同，它才有权利加锁</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">       </span><br><span class="line">    <span class="comment">// 其他情况，一律返回加锁失败</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>错误点</strong></p>
-<ol>
-<li>客户端设置的时间，可能导致时间不同步。</li>
-<li>如果某一个客户端卡了很长一点时间，导致实际的锁已经过期，并且出现了下一个锁。</li>
-<li>因为没有一个唯一标识，所以可能上一个客户端在解锁下一个客户端的锁。</li>
-</ol>
-<h3 id="多个redis实例"><a href="#多个redis实例" class="headerlink" title="多个redis实例"></a>多个redis实例</h3><ol>
-<li>客户端调用方法</li>
-<li>服务端获取当前Unix时间，以毫秒为单位。</li>
-<li>依次尝试从多个实例，使用相同的key和<strong>具有唯一性的value</strong>（例如UUID）获取锁。向Redis请求获取锁时，客户端应该设置一个网络连接和响应超时时间，这个超时时间应该小于锁的失效时间。这样可以避免服务器端Redis已经挂掉的情况下，客户端还在死死地等待响应结果。如果服务器端没有在规定时间内响应，客户端应该尽快尝试去另外一个Redis实例请求获取锁。</li>
-<li>客户端使用当前时间减去开始获取锁时间（步骤1记录的时间）就得到获取锁使用的时间。<strong>当且仅当从大多数</strong>（N/2+1，这里是3个节点）<strong>的Redis节点都取到锁，并且使用的时间小于锁失效时间时，锁才算获取成功</strong>。</li>
-<li>如果取到了锁，key的真正有效时间等于有效时间减去获取锁所使用的时间（步骤3计算的结果）。</li>
-<li>如果因为某些原因，获取锁失败（没有在至少N/2+1个Redis实例取到锁或者取锁时间已经超过了有效时间），客户端应该在<strong>所有的Redis实例上进行解锁</strong>（即便某些Redis实例根本就没有加锁成功，防止某些节点获取到锁但是客户端没有得到响应而导致接下来的一段时间不能被重新获取锁）。</li>
-</ol>
-<h4 id="疑问点"><a href="#疑问点" class="headerlink" title="疑问点"></a>疑问点</h4><p><strong>如果获取到锁之后挂掉了怎么办？</strong></p>
-<p>​    因为设置了有效时间，所有在多少时间后会自动删除掉key，这样就不会导致死锁</p>
-<p><strong>会不会出现两把锁的情况？</strong></p>
-<p>因为每个使用锁的对象需要获取到 （N/2+1），也就是一半的实例，所以就不会出现两把锁的情况</p>
-<h2 id="参考："><a href="#参考：" class="headerlink" title="参考："></a>参考：</h2><p><a target="_blank" rel="noopener" href="https://wudashan.cn/2017/10/23/Redis-Distributed-Lock-Implement/#releaseLock-wrongDemo2">Redis分布式锁的正确实现方式（Java版）</a></p>
-
-    
-
-    
-
-    
-
-  </div>
-  <div class="article-info article-info-index">
-    
-    
-    
-
-    
-    <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">展开全文 >></a>
-    </p>
-    
-
-    
-    <div class="clearfix"></div>
-  </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-JAVA配合Redis实现削峰" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-  <div class="article-entry" itemprop="articleBody">
-    
-    <h2 id="JAVA配合Redis实现削峰-限流思路图"><a href="#JAVA配合Redis实现削峰-限流思路图" class="headerlink" title="JAVA配合Redis实现削峰## 限流思路图"></a>JAVA配合Redis实现削峰## 限流思路图</h2><p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/xuefneg_1574578240013.png" alt="限流思路图"></p>
-<h2 id="实现代码"><a href="#实现代码" class="headerlink" title="实现代码"></a>实现代码</h2><p><strong>生产者</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 提交订单队列</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> userId      用户id</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> commodityId 订单id</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> key         唯一key值</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> request     请求</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> 返回提交结果</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/participate&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ResultMsg <span class="title">participate</span><span class="params">(<span class="meta">@RequestParam(&quot;userId&quot;)</span> Long userId</span></span></span><br><span class="line"><span class="function"><span class="params">        , <span class="meta">@RequestParam(&quot;commodityId&quot;)</span> Long commodityId</span></span></span><br><span class="line"><span class="function"><span class="params">        , <span class="meta">@RequestParam(&quot;key&quot;)</span> String key</span></span></span><br><span class="line"><span class="function"><span class="params">        , HttpServletRequest request)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//获取用户排队状态</span></span><br><span class="line">    BoundHashOperations&lt;String, Object, Object&gt; boundHashOps = redisTemplate.boundHashOps(<span class="string">&quot;active:kill&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//1. 查询当前秒杀状态</span></span><br><span class="line">    String status = (String) boundHashOps.get(userId + <span class="string">&quot;&quot;</span>);</span><br><span class="line">    <span class="comment">//2. 判断是否已有状态保存,如果等于null表示没有在排队</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == status) &#123;</span><br><span class="line">        <span class="comment">//进入队列</span></span><br><span class="line">        <span class="keyword">if</span> (addQueue(userId, commodityId))&#123;</span><br><span class="line">            <span class="comment">// 排队成功</span></span><br><span class="line">            redisTemplate.opsForValue().set(<span class="string">&quot;active:kill:&quot;</span> + userId, <span class="string">&quot;2&quot;</span>, <span class="number">1</span>, TimeUnit.DAYS);</span><br><span class="line">            status=<span class="string">&quot;2&quot;</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// 排队失败</span></span><br><span class="line">            redisTemplate.opsForValue().set(<span class="string">&quot;active:kill:&quot;</span> + userId, <span class="string">&quot;1&quot;</span>, <span class="number">1</span>, TimeUnit.SECONDS);</span><br><span class="line">            status=<span class="string">&quot;1&quot;</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ResultMsg msg = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="string">&quot;2&quot;</span>.equals(status))&#123;</span><br><span class="line">        msg =  <span class="keyword">new</span> ResultMsg(<span class="number">200</span>, <span class="keyword">true</span>, <span class="string">&quot;正在排队中&quot;</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="string">&quot;3&quot;</span>.equals(status))&#123;</span><br><span class="line">        msg =  <span class="keyword">new</span> ResultMsg(<span class="number">200</span>, <span class="keyword">false</span>, <span class="string">&quot;购买成功&quot;</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        msg =  <span class="keyword">new</span> ResultMsg(<span class="number">402</span>, <span class="keyword">false</span>, <span class="string">&quot;当前人数过多&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    request.setAttribute(<span class="string">&quot;body&quot;</span>, JSON.toJSONString(msg));</span><br><span class="line">    request.setAttribute(<span class="string">&quot;key&quot;</span>, key);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> msg;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 进入队列</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> userId 用户id</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> commodityId 商品id</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> 返回进入状态  true成功  false失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">addQueue</span><span class="params">(Long userId, Long commodityId)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//判断当前队列长度</span></span><br><span class="line">    Long size = redisTemplate.boundListOps(<span class="string">&quot;active:exChange&quot;</span>).size();</span><br><span class="line">    <span class="keyword">if</span> (size &gt;= <span class="number">1000</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    System.out.println(<span class="string">&quot;进入排队状态&quot;</span>);</span><br><span class="line">    <span class="comment">// 返回值的判断</span></span><br><span class="line">    redisTemplate.opsForList().rightPush(<span class="string">&quot;active:exChange&quot;</span>, userId + <span class="string">&quot;_&quot;</span> + commodityId);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><strong>消费者</strong></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.panshi.qssys.tesk;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.panshi.qssys.marketing.service.SecondKillService;</span><br><span class="line"><span class="keyword">import</span> com.panshi.qssys.share.exception.BusinessException;</span><br><span class="line"><span class="keyword">import</span> org.apache.dubbo.config.annotation.Reference;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.annotation.Autowired;</span><br><span class="line"><span class="keyword">import</span> org.springframework.data.redis.core.BoundHashOperations;</span><br><span class="line"><span class="keyword">import</span> org.springframework.data.redis.core.BoundListOperations;</span><br><span class="line"><span class="keyword">import</span> org.springframework.data.redis.core.BoundValueOperations;</span><br><span class="line"><span class="keyword">import</span> org.springframework.data.redis.core.StringRedisTemplate;</span><br><span class="line"><span class="keyword">import</span> org.springframework.scheduling.annotation.Scheduled;</span><br><span class="line"><span class="keyword">import</span> org.springframework.stereotype.Component;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.ExecutorService;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span>: 商品秒杀定时任务</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span>: 蒋文豪</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@create</span>: 2019/08/05</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SecondTask</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * redis操作对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 秒杀功能服务接口</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> SecondKillService secondKillService;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ExecutorService executorService;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 秒杀队列</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Scheduled(cron = &quot;0/1 * * * * ?&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">secondKillQueue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;定时任务启动&quot;</span>);</span><br><span class="line">        <span class="comment">//获取到队列消息</span></span><br><span class="line">        BoundListOperations&lt;String, String&gt; boundListOps = redisTemplate.boundListOps(<span class="string">&quot;active:exChange&quot;</span>);</span><br><span class="line">        <span class="comment">//排队状态</span></span><br><span class="line">        <span class="keyword">if</span> (boundListOps.size() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(boundListOps.size());</span><br><span class="line">        System.out.println(<span class="string">&quot;获取到任务消息&quot;</span>);</span><br><span class="line">        <span class="comment">//循环10次</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">            <span class="comment">//使用线程执行</span></span><br><span class="line">            executorService.submit(() -&gt; &#123;</span><br><span class="line">                <span class="comment">//1. 获取到队列中最左边的节点，并删除</span></span><br><span class="line">                String ids = boundListOps.leftPop();</span><br><span class="line">                System.out.println(<span class="string">&quot;ids&quot;</span> + ids);</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">null</span> == ids) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">//2. 将节点拆分出用户id和商品id</span></span><br><span class="line">                String[] idArray = ids.split(<span class="string">&quot;_&quot;</span>);</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">null</span> == idArray || <span class="number">2</span> != idArray.length) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                BoundValueOperations&lt;String, String&gt; valueOperations = redisTemplate.boundValueOps(<span class="string">&quot;active:kill:&quot;</span> + idArray[<span class="number">0</span>]);</span><br><span class="line">                <span class="comment">//3. 对商品进行消费</span></span><br><span class="line">                <span class="keyword">boolean</span> b = secondKillService.submitOrder(Long.parseLong(idArray[<span class="number">0</span>]), Long.parseLong(idArray[<span class="number">1</span>]));</span><br><span class="line">                <span class="comment">//4. 修改用户排队状态未已完成</span></span><br><span class="line">                <span class="keyword">if</span> (b) &#123;</span><br><span class="line">                    valueOperations.set(<span class="string">&quot;3&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-    
-
-    
-
-    
-
-  </div>
-  <div class="article-info article-info-index">
-    
-    
-    
-
-    
-    <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">展开全文 >></a>
-    </p>
-    
-
-    
-    <div class="clearfix"></div>
-  </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-Jetbrains系列产品2019.3.3最新激活方法" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-  <div class="article-entry" itemprop="articleBody">
-    
-    <h2 id="Jetbrains系列产品2019-3-3最新激活方法其实这篇直接是拿了别人的教程过来的，也算是做个备份吧，原文出处在最下面。"><a href="#Jetbrains系列产品2019-3-3最新激活方法其实这篇直接是拿了别人的教程过来的，也算是做个备份吧，原文出处在最下面。" class="headerlink" title="Jetbrains系列产品2019.3.3最新激活方法其实这篇直接是拿了别人的教程过来的，也算是做个备份吧，原文出处在最下面。"></a>Jetbrains系列产品2019.3.3最新激活方法其实这篇直接是拿了别人的教程过来的，也算是做个备份吧，原文出处在最下面。</h2><p>ok,让我们开始</p>
-<ol>
-<li><p>下载破解用的jar包</p>
-<p>在这里说明下，这个是本文编辑时下载的，后续更新可能失效，如果失效请在下方留言，或者直接去出处找。</p>
-<p> <a target="_blank" rel="noopener" href="https://pan.baidu.com/s/1FrpavOrzkzLDYShndnqRZQ">百度云下载</a><br> 提取码：2c4t。</p>
-</li>
-</ol>
-<h2 id="自动挡"><a href="#自动挡" class="headerlink" title="自动挡"></a>自动挡</h2><ol start="2">
-<li>在创建项目界面，将破解jar包直接拖到IDE窗口，点 “Restart” 按钮重启IDE。</li>
-<li>在弹出的JetbrainsAgent Helper对话框中，选择激活方式，点击安装按钮。<br>如果你是无外网环境，在对话框中勾选：我无法访问外网 选项。</li>
-<li>重启IDE，搞定。</li>
-</ol>
-<blockquote>
-<p>x. 支持两种注册方式：License server 和 Activation code:<br>    1). 选择License server方式，地址填入：<a target="_blank" rel="noopener" href="http://fls.jetbrains-agent.com/">http://fls.jetbrains-agent.com</a> （网络不佳的用第2种方式）<br>    2). 选择Activation code方式离线激活，请使用：ACTIVATION_CODE.txt 内的注册码激活<br>        如果激活窗口一直弹出（error 1653219），请去hosts文件里“移除”jetbrains相关的项目<br>        License key is in legacy format == Key invalid，表示agent配置未生效。<br>        如果你需要自定义License name，请访问：<a target="_blank" rel="noopener" href="https://zhile.io/custom-license.html">https://zhile.io/custom-license.html</a><br>    3). 现在你可以使用jetbrains-agent + license server激活jetbrains平台的付费插件了！<br>        除了：”IEDIS 2” 和 “MINBATIS”，这两个请使用 IEDIS_MINBATIS_CODE.txt 来激活。<br>        现在有这些付费插件：<a target="_blank" rel="noopener" href="https://plugins.jetbrains.com/search?isPaid=true">https://plugins.jetbrains.com/search?isPaid=true</a></p>
-</blockquote>
-<h2 id="手动挡"><a href="#手动挡" class="headerlink" title="手动挡"></a>手动挡</h2><ol start="2">
-<li>将解压出来的<code>jetbrains-agent.jar</code>文件放在idea的安装目录下<br>右键点击idea图标，查看属性,点击 <code>打开文件所在的位置</code>，到达安装</li>
-</ol>
-<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579490182427.png" alt="image.png"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492017245.png" alt="image.png"><br>3. 编辑同级目录下的<code>idea64.exe.vmoptions</code>文件<br>   注意，只能用idea编辑，不能用其他编辑器！！！</p>
-<p>在这里小伙伴们就有疑问了，我还没激活怎么编辑呢？试用30天呗。<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492218228.png" alt="image.png"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492317245.png" alt="image.png"></p>
-<blockquote>
-<p>一定要自己确认好路径(不要使用中文路径)，填错会导致IDE打不开！！！最好使用绝对路径。</p>
-</blockquote>
-<p>一个vmoptions内只能有一个-javaagent参数。<br>    示例:<br>      mac:      -javaagent:/Users/neo/jetbrains-agent.jar<br>      linux:    -javaagent:/home/neo/jetbrains-agent.jar<br>      windows:  -javaagent:C:\Users\neo\jetbrains-agent.jar<br>    如果还是填错了，参考这篇文章编辑vmoptions补救：<br>    <a target="_blank" rel="noopener" href="https://intellij-support.jetbrains.com/hc/en-us/articles/206544519">https://intellij-support.jetbrains.com/hc/en-us/articles/206544519</a></p>
-<p>注:到这一步的朋友很有可能因为路径问题导致idea打不开，根据上文的链接，我们找到</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">C:\Users\你的用户名\.你的idea版本\config</span><br></pre></td></tr></table></figure>
-<p>路径下的 <code>idea64.exe.vmoptions</code> 文件，删掉即可，</p>
-<ol start="4">
-<li>重启后激活<blockquote>
-<p>点击IDE菜单 “Help” -&gt; “Register…” 或 “Configure” -&gt; “Manage License…”<br> 支持两种注册方式：License server 和 Activation code:<br> 1). 选择License server方式，地址填入：<a target="_blank" rel="noopener" href="http://jetbrains-license-server/">http://jetbrains-license-server</a> （应该会自动填上）</p>
-<pre><code> 或者点击按钮：&quot;Discover Server&quot;来自动填充地址。网络不佳的见第2种方式。</code></pre>
-<p> 2). 选择Activation code方式离线激活，请使用：ACTIVATION_CODE.txt 内的注册码激活</p>
-</blockquote>
-</li>
-</ol>
-<p>如果激活窗口一直弹出（error 1653219），请去hosts文件里移除jetbrains相关的项目<br>License key is in legacy format == Key invalid，表示agent配置未生效。<br>如果你需要自定义License name，请访问：<a target="_blank" rel="noopener" href="https://zhile.io/custom-license.html">https://zhile.io/custom-license.html</a><br>   <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492726091.png" alt="image.png"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492755357.png" alt="image.png"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1579492773929.png" alt="image.png"></p>
-<h2 id="本文环境"><a href="#本文环境" class="headerlink" title="本文环境"></a>本文环境</h2><p>可能之前小伙伴们用其他方式激活过，导致按照本文方法激活没有效果，下面是本文在激活时的环境。</p>
-<ul>
-<li>hosts文件未做任何修改</li>
-<li>idea版本 IntelliJ IDEA 2019.3.1 </li>
-</ul>
-<p>在以下IDE版本测试可成功激活（v3.0.3）：</p>
-<ul>
-<li>IntelliJ IDEA 2019.3.3及以下</li>
-<li>AppCode 2019.3.5及以下</li>
-<li>CLion 2019.3.4及以下</li>
-<li>DataGrip 2019.3.3及以下</li>
-<li>GoLand 2019.3.3及以下</li>
-<li>PhpStorm 2019.3.3及以下</li>
-<li>PyCharm 2019.3.3及以下</li>
-<li>Rider 2019.3.4及以下</li>
-<li>RubyMine 2019.3.3及以下</li>
-<li>WebStorm 2019.3.3及以下</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://zhile.io/2018/08/25/jetbrains-license-server-crack.html">Jetbrains系列产品2019.3.3最新激活方法[持续更新]</a></p>
-
-    
-
-    
-
-    
-
-  </div>
-  <div class="article-info article-info-index">
-    
-    
-    
-
-    
-    <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/Jetbrains%E7%B3%BB%E5%88%97%E4%BA%A7%E5%93%812019.3.3%E6%9C%80%E6%96%B0%E6%BF%80%E6%B4%BB%E6%96%B9%E6%B3%95/">展开全文 >></a>
-    </p>
-    
-
-    
-    <div class="clearfix"></div>
-  </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-Maven私服搭建及使用" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-  <div class="article-entry" itemprop="articleBody">
-    
-    <h2 id="Maven私服搭建及使用-Maven私服搭建及使用"><a href="#Maven私服搭建及使用-Maven私服搭建及使用" class="headerlink" title="Maven私服搭建及使用# Maven私服搭建及使用"></a>Maven私服搭建及使用# Maven私服搭建及使用</h2><h2 id="一、搭建环境"><a href="#一、搭建环境" class="headerlink" title="一、搭建环境"></a>一、搭建环境</h2><h3 id="1-安装包"><a href="#1-安装包" class="headerlink" title="1. 安装包"></a>1. 安装包</h3><p><a target="_blank" rel="noopener" href="https://www.sonatype.com/oss-thank-you-tar.gz">安装包下载链接</a></p>
-<p><a target="_blank" rel="noopener" href="https://sonatype-download.global.ssl.fastly.net/nexus/3/latest-unix.tar.gz">当前服务器使用nexus  3.19.1-01</a></p>
-<h3 id="2-安装步骤"><a href="#2-安装步骤" class="headerlink" title="2. 安装步骤"></a>2. 安装步骤</h3><p>具体步骤参考资料 <code>Linux下使用Nexus创建maven私服</code></p>
-<h2 id="二、注意事项"><a href="#二、注意事项" class="headerlink" title="二、注意事项"></a>二、注意事项</h2><h3 id="密码错误"><a href="#密码错误" class="headerlink" title="密码错误"></a>密码错误</h3><p>帐号: admin</p>
-<p>当前服务器使用的版本的初始密码不是之前的   admin123 </p>
-<p>具体密码在 <code>/nexus-data/admin.password </code>中  （明文未加密）</p>
-<h3 id="部署jar出现401权限错误"><a href="#部署jar出现401权限错误" class="headerlink" title="部署jar出现401权限错误"></a>部署jar出现401权限错误</h3><p>该pom文件的pom.xml文件需配置</p>
-<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">distributionManagement</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 正式版 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">repository</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- id和maven的相关id一致 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">id</span>&gt;</span>nexus-releases<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>nexus-releases<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url</span>&gt;</span>http://jed:8081/repository/hadoop-hosted-test-repository/<span class="tag">&lt;/<span class="name">url</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">repository</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 快照版 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">snapshotRepository</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- id和maven的相关id一致 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">id</span>&gt;</span>nexus-snapshot<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>nexus-snapshot<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url</span>&gt;</span>http://jed:8081/repository/hadoop-hosted-test-repository-snapshots/<span class="tag">&lt;/<span class="name">url</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">snapshotRepository</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">distributionManagement</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>maven的 settings.xml 需配置认证信息</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&lt;servers&gt;</span><br><span class="line">    &lt;server&gt;</span><br><span class="line">      &lt;id&gt;nexus-releases&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;username&gt;hadoop&lt;&#x2F;username&gt;</span><br><span class="line">      &lt;password&gt;hadoop&lt;&#x2F;password&gt;</span><br><span class="line">    &lt;&#x2F;server&gt;</span><br><span class="line">    &lt;server&gt;</span><br><span class="line">      &lt;id&gt;nexus-snapshot&lt;&#x2F;id&gt;</span><br><span class="line">      &lt;username&gt;hadoop&lt;&#x2F;username&gt;</span><br><span class="line">      &lt;password&gt;hadoop&lt;&#x2F;password&gt;</span><br><span class="line">    &lt;&#x2F;server&gt;</span><br><span class="line">&lt;&#x2F;servers&gt;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&lt;mirror&gt;</span><br><span class="line">    &lt;id&gt;dev-repository-group&lt;&#x2F;id&gt;</span><br><span class="line">    &lt;mirrorOf&gt;*&lt;&#x2F;mirrorOf&gt;</span><br><span class="line">    &lt;name&gt;dev-repository-group&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;url&gt;http:&#x2F;&#x2F;192.168.8.123:8081&#x2F;repository&#x2F;dev-repository-group&lt;&#x2F;url&gt;</span><br><span class="line">&lt;&#x2F;mirror&gt;</span><br><span class="line">&lt;mirror&gt;</span><br><span class="line">    &lt;id&gt;dev-repository-hosted-snapshot&lt;&#x2F;id&gt;</span><br><span class="line">    &lt;mirrorOf&gt;*&lt;&#x2F;mirrorOf&gt;</span><br><span class="line">    &lt;name&gt;dev-repository-hosted-snapshot&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;url&gt;http:&#x2F;&#x2F;192.168.8.123:8081&#x2F;repository&#x2F;dev-repository-snapshot&lt;&#x2F;url&gt;</span><br><span class="line">&lt;&#x2F;mirror&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1336556">Linux下使用Nexus创建maven私服</a></p>
-<p>额外参考 <a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1098081">本地私服仓库nexus3.3.1使用手册</a></p>
-<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/wbl001/p/11154828.html">Docker 搭建Maven私服nexus 3.17初始密码登录不上问题/admin登陆不上问题</a></p>
-
-    
-
-    
-
-    
-
-  </div>
-  <div class="article-info article-info-index">
-    
-    
-    
-
-    
-    <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/Maven%E7%A7%81%E6%9C%8D%E6%90%AD%E5%BB%BA%E5%8F%8A%E4%BD%BF%E7%94%A8/">展开全文 >></a>
+      <a class="article-more-a" href="/2020/09/18/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">展开全文 >></a>
     </p>
     
 
@@ -694,26 +382,72 @@
 
 
   
-    <article id="post-Navicat 激活 Navicat Keygen Patch" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-微服务架构和单体架构" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
   <div class="article-entry" itemprop="articleBody">
     
-    <h2 id="Navicat-激活-Navicat-Keygen-Patch-软件版本"><a href="#Navicat-激活-Navicat-Keygen-Patch-软件版本" class="headerlink" title="Navicat 激活 Navicat Keygen Patch## 软件版本"></a>Navicat 激活 Navicat Keygen Patch## 软件版本</h2><p>Navicat Premium版本:15<br>Navicat Keygen Patch版本: 5.6.0<br> <a target="_blank" rel="noopener" href="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/Navicat%20Keygen%20Patch%20v5.6.0%20DFoX_1585650555373.exe">下载地址</a></p>
-<h2 id="教程"><a href="#教程" class="headerlink" title="教程"></a>教程</h2><ol>
-<li>安装 <code>Navicat Premium</code></li>
-<li>将<code>破解软件</code>放在安装根目录</li>
-<li>运行<code>破解软件</code></li>
-<li>点击 <code>Patch</code><br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/Snipaste_2020-03-31_16-58-36_1585649784265.png" alt="Snipaste_20200331_165836.png"></li>
-<li>出现图中提示就是成功了，如果不是这个提示，卸载Navicat重装.<br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1585649832873.png" alt="image.png"></li>
-<li>启动 <code>Navicat Premium</code> </li>
-<li>选择激活</li>
-<li>点击 <code>Generate</code> 后就可以获取激活码<br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1585649872702.png" alt="image.png"></li>
-<li>点击激活按钮后会出现弹出框提示激活服务器不可用，选择<code>手动激活</code><br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1585649895826.png" alt="image.png"></li>
-<li>将<code>请求码</code>复制到激活软件的<code>Request code</code> 框内后点击 <code>Generate</code>获取激活码<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1585649913026.png" alt="image.png"></li>
-<li><code>激活软件</code>里生成的<code>激活码</code>会自动填入到<code>Navicat Premium</code>中</li>
-<li>点击激活即可<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/image_1585649932647.png" alt="image.png"></li>
+    <h2 id="微服务架构和单体架构-一、微服务架构和单体架构"><a href="#微服务架构和单体架构-一、微服务架构和单体架构" class="headerlink" title="微服务架构和单体架构# 一、微服务架构和单体架构"></a>微服务架构和单体架构# 一、微服务架构和单体架构</h2><h2 id="微服务架构"><a href="#微服务架构" class="headerlink" title="微服务架构"></a>微服务架构</h2><h3 id="什么是微服务"><a href="#什么是微服务" class="headerlink" title="什么是微服务"></a>什么是微服务</h3><p>微服务架构的系统是一个分布式的系统，按业务进行划分为独立的服务单元，解决单体系统的不足，同时也满足越来越复杂的业务需求。</p>
+<blockquote>
+<p>微服务架构就是将单一程序开发成一个微服务，每个微服务运行在自己的进程中，并使用轻量级的机制通信，通常是HTTP RESTFUL API。这些服务围绕业务能力来划分，并通过自动化部署机制来独立部署。这些服务可以使用不同的编程语言，不同数据库，以保证最低限度的集中式管理。</p>
+</blockquote>
+<p>总结起来微服务就是将一个单体架构的应用按业务划分为一个个的独立运行的程序即服务，它们之间通过HTTP协议进行通信（也可以采用消息队列来通信，如RoocketMQ，Kafaka等），可以采用不同的编程语言，使用不同的存储技术，自动化部署（如Jenkins）减少人为控制，降低出错概率。服务数量越多，管理起来越复杂，因此采用集中化管理。例如Eureka，Zookeeper等都是比较常见的服务集中化管理框架。</p>
+<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard_1575276750822.png" alt="clipboard.png"></p>
+<h3 id="优势"><a href="#优势" class="headerlink" title="优势"></a>优势</h3><ol>
+<li><p><strong>轻巧</strong></p>
+<p>将复杂的业务拆分成多个小的业务，每个业务拆分成一个服务，将复杂的问题简单化。利于分工，降低新人的学习成本。 </p>
+</li>
+<li><p><strong>细分业务</strong></p>
+<p>微服务系统是分布式系统，业务与业务之间完全解耦，随着业务的增加可以根据业务再拆分，具有极强的横向扩展能力。面对搞并发的场景可以将服务集群化部署，加强系统负载能力。 </p>
+</li>
+<li><p><strong>功能独立</strong></p>
+<p>服务间采用HTTP协议通信，服务与服务之间完全独立。每个服务可以根据业务场景选取合适的编程语言和数据库。 </p>
+</li>
+<li><p><strong>不影响其他功能</strong></p>
+<p>微服务每个服务都是独立部署的，每个服务的修改和部署对其他服务没有影响。</p>
+</li>
+<li><p><strong>不受技术限制</strong></p>
+<p>在微服务中，我们可以结合项目业务及团队的特点，合理地选择技术栈</p>
+</li>
 </ol>
+<h3 id="微服务设计要点"><a href="#微服务设计要点" class="headerlink" title="微服务设计要点"></a>微服务设计要点</h3><ol>
+<li>AKF拆分原则</li>
+<li>前后端分离</li>
+<li>无状态服务</li>
+<li>Restful通信风格</li>
+</ol>
+<h2 id="传统单体架构"><a href="#传统单体架构" class="headerlink" title="传统单体架构"></a>传统单体架构</h2><h3 id="什么是单体架构"><a href="#什么是单体架构" class="headerlink" title="什么是单体架构"></a>什么是单体架构</h3><p>在软件设计的时候经常提到和使用经典的3层模型，即表现层，业务逻辑层，数据访问层。虽然在软件设计中划分了3层模型，但是对业务场景没有划分，一个典型的单体架构就是将所有的业务场景的表现层，业务逻辑层，数据访问层放在一个工程中最终经过编译，打包，部署在一台服务器上。此时服务架构如图： </p>
+<p><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/clipboard%20(1)_1575276761648.png" alt="clipboard 1.png"></p>
+<blockquote>
+<p>一个归档包（例如war格式）包含了应用所有功能的应用程序，我们通常称之为单体应用。架构单体应用的方法论，我们称之为单体应用架构。</p>
+</blockquote>
+<h3 id="单体架构的优点"><a href="#单体架构的优点" class="headerlink" title="单体架构的优点"></a>单体架构的优点</h3><ol>
+<li><p><strong>结构简单，容易理解</strong></p>
+<p> 对于开发人员而言，这是非常重要的一点。经典的分层架构已经相对比较成熟，更容易被更多的开发人员所理解和接受，学习成本也相对比较低，对团队本身的要求也不是特别高。这不仅使得系统的设计和开发都相对比较容易，而且出错的几率会相对低一些。用现在时髦的词语说，就是“坑相对较少”，开发实现都可以“踩在踩坑人的背上前进”</p>
+</li>
+<li><p><strong>实现数据一致性相对比较容易</strong></p>
+<p> 通过本地事务或者分布式事务可以方便有效地保证数据一致性</p>
+</li>
+<li><p><strong>部署简单方便</strong></p>
+<p> 可以方便快速地打包成WAR包，部署到Jetty或者Tomcat容器中。一次部署完成即可运行整个应用程序</p>
+</li>
+</ol>
+<blockquote>
+<p>总结起来，这种架构大致可以使用下图表示，各层组件可以通过相互引用进行相互调用，也可以通过IoC/DI实现解耦，进而实现应用程序“一体化”，这也是“单体架构”一词的由来：</p>
+</blockquote>
+<h3 id="单体架构存在的问题"><a href="#单体架构存在的问题" class="headerlink" title="单体架构存在的问题"></a>单体架构存在的问题</h3><ol>
+<li><p><strong>系统仍然为单体应用</strong></p>
+<p> 大量的业务必然会有大量的代码，代码的可读性和可维护性依然很差。</p>
+</li>
+<li><p><strong>存在瓶颈</strong></p>
+<p> 面对海量的用户，数据库将会成为瓶颈，解决方案将使用分布式数据库，也就是将数据库进行分库分表。</p>
+</li>
+<li><p><strong>持续交付能力差</strong></p>
+<p> 业务越复杂，代码越多，修改代码和添加代码所需的时间越长。新人熟悉代码的时间长、成本高。</p>
+</li>
+</ol>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/sD7O95O/article/details/82141686">漫谈单体架构与微服务架构（上）：单体架构</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/guanghe/p/10978349.html">微服务设计、拆分原则</a></p>
 
     
 
@@ -729,7 +463,7 @@
 
     
     <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/Navicat%20%E6%BF%80%E6%B4%BB%20Navicat%20Keygen%20Patch/">展开全文 >></a>
+      <a class="article-more-a" href="/2020/09/18/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E5%92%8C%E5%8D%95%E4%BD%93%E6%9E%B6%E6%9E%84/">展开全文 >></a>
     </p>
     
 
@@ -759,202 +493,58 @@
 
 
   
-    <article id="post-Redis入门" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-spring-boot 经典布局 及 启动配置" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
   <div class="article-entry" itemprop="articleBody">
     
-    <h2 id="Redis入门-Redis入门"><a href="#Redis入门-Redis入门" class="headerlink" title="Redis入门# Redis入门"></a>Redis入门# Redis入门</h2><h2 id="一、介绍"><a href="#一、介绍" class="headerlink" title="一、介绍"></a>一、介绍</h2><p>redis是键值对的数据库，常用的五种数据类型为</p>
+    <h2 id="spring-boot-经典布局-及-启动配置-依赖"><a href="#spring-boot-经典布局-及-启动配置-依赖" class="headerlink" title="spring-boot 经典布局 及 启动配置## 依赖"></a>spring-boot 经典布局 及 启动配置## 依赖</h2><p>pom.xml</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">project.build.sourceEncoding</span>&gt;</span>UTF-8<span class="tag">&lt;/<span class="name">project.build.sourceEncoding</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">maven.compiler.source</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">maven.compiler.source</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">maven.compiler.target</span>&gt;</span>1.8<span class="tag">&lt;/<span class="name">maven.compiler.target</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--</span></span><br><span class="line"><span class="comment">         spring-boot-starter-parent是一个特殊启动器，提供一些Maven的默认值。</span></span><br><span class="line"><span class="comment">         它还提供依赖管理 dependency-management 标签，以便您可以省略子模块依赖关系的版本标签。</span></span><br><span class="line"><span class="comment">    --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">parent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-parent<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.1.6.RELEASE<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">parent</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- 依赖Spring boot web 启动器 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-web<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--配置文件提示--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-configuration-processor<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">optional</span>&gt;</span>true<span class="tag">&lt;/<span class="name">optional</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- 可执行jar插件； 运行jar就等于运行了一个web项目--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-maven-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="布局"><a href="#布局" class="headerlink" title="布局"></a>布局</h2><p>com</p>
 <ul>
-<li>字符串类型（string）</li>
-<li>散列类型（hash）</li>
-<li>列表类型（list）</li>
-<li>集合类型（set）</li>
-<li>有序集合类型（zset）</li>
+<li>example<ul>
+<li>myproject<ul>
+<li>Application.java</li>
+<li>domain<ul>
+<li>Customer.java</li>
+<li>CustomerRepository.java</li>
 </ul>
-<p>Redis用作缓存，主要两个用途：高性能，高并发，因为内存天然支持高并发</p>
-<h2 id="二、安装使用"><a href="#二、安装使用" class="headerlink" title="二、安装使用"></a>二、安装使用</h2><h3 id="1-安装-epel仓库"><a href="#1-安装-epel仓库" class="headerlink" title="1.安装 epel仓库"></a>1.安装 epel仓库</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum search epel</span><br><span class="line">yum -y install epel-release.noarch</span><br><span class="line">yum -y install redis</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-启动"><a href="#2-启动" class="headerlink" title="2.启动"></a>2.启动</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">service redis start</span><br><span class="line">find / -name redis</span><br></pre></td></tr></table></figure>
-<h3 id="卸载"><a href="#卸载" class="headerlink" title="卸载"></a>卸载</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">rpm -qa | grep redis</span><br><span class="line">redis-3.2.10-2.el7.x86_64</span><br><span class="line">rpm -e redis-3.2.10-2.el7.x86_64</span><br></pre></td></tr></table></figure>
-
-<h3 id="查看6379端口"><a href="#查看6379端口" class="headerlink" title="查看6379端口"></a>查看6379端口</h3><p>yum -y install net-tools<br>netstat -aon | grep 6379</p>
-<h3 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h3><p>redis-cli<br>set 键 值<br>get 键</p>
-<h3 id="修改-etc-redis-conf"><a href="#修改-etc-redis-conf" class="headerlink" title="修改 /etc/redis.conf"></a>修改 /etc/redis.conf</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bind 192.168.1.238  绑定ip 远程操作</span><br></pre></td></tr></table></figure>
-
-
-<h3 id="redis的ui客户端"><a href="#redis的ui客户端" class="headerlink" title="redis的ui客户端"></a>redis的ui客户端</h3><p><a target="_blank" rel="noopener" href="https://github.com/cinience/RedisStudio/releases">redisstudio</a></p>
-<p>redis-desktop-manager</p>
-<h2 id="二、redis简单配置"><a href="#二、redis简单配置" class="headerlink" title="二、redis简单配置"></a>二、redis简单配置</h2><ol>
-<li><p>设置登录密码（默认没有密码登陆）</p>
-<ul>
-<li><p>redis 设置登陆的密码</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">requirepass 123456</span><br></pre></td></tr></table></figure>
 </li>
-<li><p>重启redis</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service redis restart</span><br></pre></td></tr></table></figure>
+<li>service<ul>
+<li>CustomerService.java</li>
+</ul>
 </li>
-<li><p>连接redis 后 </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">auth 密码 </span><br></pre></td></tr></table></figure>
+<li>web<ul>
+<li>CustomerController.java</li>
+</ul>
 </li>
 </ul>
 </li>
-<li><p>设置数据库个数</p>
-<ul>
-<li><p>redis所有键值对数据都创建在数据库中  数据库没有名字  只有索引 默认数据 0号数据</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select 数据库下标（从0开始）</span><br></pre></td></tr></table></figure>
+</ul>
 </li>
-<li><p>如果需要添加数据库的个数 修改 /etc/redis.conf </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">databases 具体数据库个数</span><br></pre></td></tr></table></figure>
+</ul>
+<h2 id="启动函数"><a href="#启动函数" class="headerlink" title="启动函数"></a>启动函数</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.myproject;</span><br><span class="line"><span class="keyword">import</span> org.springframework.boot.SpringApplication;</span><br><span class="line"><span class="keyword">import</span> org.springframework.boot.autoconfigure.EnableAutoConfiguration;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.ComponentScan;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.Configuration;</span><br><span class="line"></span><br><span class="line"><span class="comment">//@Configuration</span></span><br><span class="line"><span class="comment">//@EnableAutoConfiguration</span></span><br><span class="line"><span class="comment">//@ComponentScan</span></span><br><span class="line"><span class="comment">//以上注解可直接换成@SpringBootApplication使用</span></span><br><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        SpringApplication.run(Application.class, args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="静态资源"><a href="#静态资源" class="headerlink" title="静态资源"></a>静态资源</h2><ul>
+<li>默认情况下，SpringBoot将从类路径或ServletContext的根目录中的名为/static（或/public或/resources或/META-INF/resources）的目录提供静态内容</li>
+<li>它使用Spring MVC中的ResourceHttpRequestHandler，因此您可以通过添加自己的WebMvcConfigurerAdapter并覆盖addResourceHandlers方法来修改该行为。</li>
+<li>默认情况下，资源映射到/ ，但可以通过spring.mvc.static-path-pattern调整。 例如，将所有资源重定位到 /resources/可以配置如下：  <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">spring.mvc.static‐path‐pattern=/resources/**</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># 修改前</span><br><span class="line">127.0.0.1:8080/xxx.html</span><br><span class="line"># 修改后</span><br><span class="line">127.0.0.1:8080/resources/xxx.html</span><br></pre></td></tr></table></figure>
 
 </li>
 </ul>
-</li>
-</ol>
-<h2 id="三、使用"><a href="#三、使用" class="headerlink" title="三、使用"></a>三、使用</h2><h3 id="1-redis-keys相关命令"><a href="#1-redis-keys相关命令" class="headerlink" title="1. redis keys相关命令"></a>1. redis keys相关命令</h3><p>redis存储的是键值对  对键进行操作的命令</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">//获取key对应的值</span><br><span class="line">get key</span><br><span class="line">//删除key对应的值</span><br><span class="line"><span class="built_in">del</span> key</span><br><span class="line">//判断数据库中是否存在该key对应的数据</span><br><span class="line">exists key</span><br><span class="line">//超时时间 给key设置超时时间 单位是s</span><br><span class="line">expire key</span><br><span class="line">//列表显示所有的键  可以模糊匹配 比如 keys user_* 匹配user_开头所有</span><br><span class="line">keys *</span><br><span class="line">//获取某个键对应的值的类型（默认是string类型）</span><br><span class="line"><span class="built_in">TYPE</span> key</span><br></pre></td></tr></table></figure>
+<h2 id="错误页"><a href="#错误页" class="headerlink" title="错误页"></a>错误页</h2><p>resources.static.error.404.html</p>
+<h2 id="自定义图标"><a href="#自定义图标" class="headerlink" title="自定义图标"></a>自定义图标</h2><p>resources.static.favicon.ico</p>
+<h2 id="热部署"><a href="#热部署" class="headerlink" title="热部署"></a>热部署</h2><p>pom.xml依赖</p>
+<!-- 热部署 -->
 
-<h3 id="2-redis所有数据类型（值的类型）"><a href="#2-redis所有数据类型（值的类型）" class="headerlink" title="2. redis所有数据类型（值的类型）"></a>2. redis所有数据类型（值的类型）</h3><h4 id="字符串"><a href="#字符串" class="headerlink" title="字符串"></a>字符串</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">//将 key 中储存的数字值增一。</span><br><span class="line"><span class="built_in">SET</span> key value</span><br><span class="line">//获取指定 key 的值。</span><br><span class="line">GET key</span><br><span class="line">//返回 key 所储存的字符串值的长度。</span><br><span class="line">STRLEN key</span><br><span class="line">//将 key 中储存的数字值增一。</span><br><span class="line">INCR key</span><br><span class="line">//如果 key 已经存在并且是一个字符串， APPEND 命令将指定的 value 追加到该 key 原来值（value）的末尾。</span><br><span class="line">APPEND key value</span><br></pre></td></tr></table></figure>
-
-<h4 id="hash（对象-多个属性）"><a href="#hash（对象-多个属性）" class="headerlink" title="hash（对象 多个属性）"></a>hash（对象 多个属性）</h4><blockquote>
-<p>class User{<br>    String id=1;<br>    String name=”zs”;<br>}</p>
-</blockquote>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">//同时将多个 field<span class="literal">-value</span> (域-值)对设置到哈希表 key 中。</span><br><span class="line">HMSET key field1 value1 [<span class="type">field2</span> <span class="type">value2</span> ] </span><br><span class="line">//获取所有哈希表中的字段</span><br><span class="line">HKEYS key</span><br><span class="line">//获取在哈希表中指定 key 的所有字段和值</span><br><span class="line">HGETALL key </span><br><span class="line">//获取存储在哈希表中指定字段的值</span><br><span class="line">HGET key field </span><br><span class="line">//删除一个或多个哈希表字段</span><br><span class="line">HDEL key field1 [<span class="type">field2</span>] </span><br><span class="line">//查看哈希表 key 中，指定的字段是否存在。</span><br><span class="line">HEXISTS key field </span><br></pre></td></tr></table></figure>
-<h4 id="列表（list-数组-队列-栈）"><a href="#列表（list-数组-队列-栈）" class="headerlink" title="列表（list 数组 队列 栈）"></a>列表（list 数组 队列 栈）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">//将一个或多个值插入到列表头部</span><br><span class="line">LPUSH key value1 [<span class="type">value2</span>]</span><br><span class="line">//在列表中添加一个或多个值</span><br><span class="line">RPUSH key value1 [<span class="type">value2</span>]</span><br><span class="line">//获取列表长度</span><br><span class="line">LLEN key</span><br><span class="line">//通过索引获取列表中的元素</span><br><span class="line">LINDEX key index</span><br><span class="line">//移除列表元素</span><br><span class="line">LREM key count value</span><br><span class="line">//从头往尾移除值为 value 的元素。</span><br><span class="line">count &gt; <span class="number">0</span>:</span><br><span class="line">//从尾往头移除值为 value 的元素。</span><br><span class="line">count &lt; <span class="number">0</span>:</span><br><span class="line">//移除所有值为 value 的元素。</span><br><span class="line">count = <span class="number">0</span>:</span><br><span class="line">//获取列表指定范围内的元素</span><br><span class="line">LRANGE key <span class="built_in">start</span> stop</span><br></pre></td></tr></table></figure>
-
-<h4 id="set（无重复元素集合）"><a href="#set（无重复元素集合）" class="headerlink" title="set（无重复元素集合）"></a>set（无重复元素集合）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">//向集合添加一个或多个成员</span><br><span class="line">SADD key member1 [<span class="type">member2</span>]</span><br><span class="line">// 获取集合的成员数</span><br><span class="line">SCARD key</span><br><span class="line">//判断 member 元素是否是集合 key 的成员</span><br><span class="line">SISMEMBER key member</span><br><span class="line">//获取所有成员</span><br><span class="line">SMEMBERS key</span><br><span class="line">//移除集合中一个或多个成员</span><br><span class="line">SREM key member1 [<span class="type">member2</span>]</span><br></pre></td></tr></table></figure>
-
-<h4 id="zset（排序集合）"><a href="#zset（排序集合）" class="headerlink" title="zset（排序集合）"></a>zset（排序集合）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">//向有序集合添加一个或多个成员，或者更新已存在成员的分数</span><br><span class="line">ZADD key score1 member1 [<span class="type">score2</span> <span class="type">member2</span>]</span><br><span class="line">//获取有序集合的成员数</span><br><span class="line">ZCARD key</span><br><span class="line">//通过索引区间返回有序集合成指定区间内的成员</span><br><span class="line">ZRANGE key <span class="built_in">start</span> stop [<span class="type">WITHSCORES</span>]</span><br><span class="line">//返回有序集中指定区间内的成员，通过索引，分数从高到底</span><br><span class="line">ZREVRANGE key <span class="built_in">start</span> stop [<span class="type">WITHSCORES</span>]</span><br></pre></td></tr></table></figure>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-devtools<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">optional</span>&gt;</span>true<span class="tag">&lt;/<span class="name">optional</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
 
 
-
-
-<h2 id="四、应用场景"><a href="#四、应用场景" class="headerlink" title="四、应用场景"></a>四、应用场景</h2><h3 id="分布式锁（string）"><a href="#分布式锁（string）" class="headerlink" title="分布式锁（string）"></a>分布式锁（string）</h3><p>setnx key value()，当key不存在时，将 key 的值设为 value ，返回1。若给定的 key 已经存在，则setnx不做任何动作，返回0。<br>当setnx返回1时，表示获取锁，做完操作以后del key，表示释放锁，如果setnx返回0表示获取锁失败.</p>
-<blockquote>
-<p>SETNX key value<br>只在键 key 不存在的情况下， 将键 key 的值设置为 value 。<br>若键 key 已经存在， 则 SETNX 命令不做任何动作。</p>
-</blockquote>
-<h3 id="计数器（string）"><a href="#计数器（string）" class="headerlink" title="计数器（string）"></a>计数器（string）</h3><p>如知乎每个问题的被浏览器次数</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">set</span> key <span class="number">0</span></span><br><span class="line">// incr readcount::&#123;帖子id&#125; 每阅读一次</span><br><span class="line">incr key</span><br><span class="line">// get readcount::&#123;帖子id&#125; 获取阅读量</span><br><span class="line">get key</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>incr<br>为键 key 储存的数字值加上一。<br>如果键 key 不存在， 那么它的值会先被初始化为 0 ， 然后再执行 INCR 命令。<br>如果键 key 储存的值不能被解释为数字， 那么 INCR 命令将返回一个错误。<br>本操作的值限制在 64 位(bit)有符号数字表示之内。</p>
-</blockquote>
-<h3 id="消息队列（list）"><a href="#消息队列（list）" class="headerlink" title="消息队列（list）"></a>消息队列（list）</h3><p>在list里面一边进，一边出即可</p>
-<p><strong>实现方式一</strong></p>
-<ol>
-<li><p>一直往list左边放</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lpush key value </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>key这个list有元素时，直接弹出，没有元素被阻塞，直到等待超时或发现可弹出元素为止，上面例子超时时间为10s</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brpop key value 10 </span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<p><strong>实现方式二</strong></p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rpush key value</span><br><span class="line">blpop key value 10</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="抽奖活动（set）"><a href="#抽奖活动（set）" class="headerlink" title="抽奖活动（set）"></a>抽奖活动（set）</h3><ol>
-<li><p>参加抽奖活动</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sadd key &#123;userId&#125; </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>获取所有抽奖用户，大轮盘转起来</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">smembers key </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>抽取count名中奖者，并从抽奖活动中移除</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">spop key count </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>抽取count名中奖者，不从抽奖活动中移除</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">srandmember key count</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>实现点赞，签到，like等功能(set)</p>
-</blockquote>
-</li>
-</ol>
-<h3 id="电商商品筛选（set）"><a href="#电商商品筛选（set）" class="headerlink" title="电商商品筛选（set）"></a>电商商品筛选（set）</h3><p>每个商品入库的时候即会建立他的静态标签列表如，品牌，尺寸，处理器，内存</p>
-<ol>
-<li><p>将拯救者y700P-001和ThinkPad-T480这两个元素放到集合brand::lenovo</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sadd brand::lenovo 拯救者y700P-001 ThinkPad-T480</span><br><span class="line">sadd screenSize::15.6 拯救者y700P-001 机械革命Z2AIR</span><br><span class="line">sadd processor::i7 拯救者y700P-001 机械革命X8TIPlus</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>获取品牌为联想，屏幕尺寸为15.6，并且处理器为i7的电脑品牌(sinter为获取集合的交集)</p>
- <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sinter brand::lenovo screenSize::15.6 processor::i7 -&gt; 拯救者y700P-001</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h3 id="排行版（zset）"><a href="#排行版（zset）" class="headerlink" title="排行版（zset）"></a>排行版（zset）</h3><p>redis的zset天生是用来做排行榜的、好友列表, 去重, 历史记录等业务需求</p>
-<ol>
-<li><p>user1的用户分数为 10</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">zadd ranking 10 user1</span><br><span class="line">zadd ranking 20 user2</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>取分数最高的3个用户</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">zrevrange ranking 0 2 withscores</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h2 id="五、过期策略"><a href="#五、过期策略" class="headerlink" title="五、过期策略"></a>五、过期策略</h2><p>redis 会将每个设置了过期时间的 key 放入到一个独立的字典中，以后会定期遍历这个字典来删除到期的 key。</p>
-<ul>
-<li><p><strong>定期删除策略</strong></p>
-<p>Redis 默认会每秒进行十次过期扫描（100ms一次），过期扫描不会遍历过期字典中所有的 key，而是采用了一种简单的贪心策略。<br>从过期字典中随机 20 个 key；<br>删除这 20 个 key 中已经过期的 key；<br>如果过期的 key 比率超过 1/4，那就重复步骤 1；</p>
-</li>
-<li><p><strong>惰性删除</strong></p>
-<p>除了定期遍历之外，它还会使用惰性策略来删除过期的 key，所谓惰性策略就是在客户端访问这个 key 的时候，redis 对 key 的过期时间进行检查，如果过期了就立即删除，不会给你返回任何东西。</p>
-</li>
-</ul>
-<blockquote>
-<p>定期删除是集中处理，惰性删除是零散处理。</p>
-</blockquote>
-<h3 id="为什么要采用定期删除-惰性删除2种策略呢？"><a href="#为什么要采用定期删除-惰性删除2种策略呢？" class="headerlink" title="为什么要采用定期删除+惰性删除2种策略呢？"></a>为什么要采用定期删除+惰性删除2种策略呢？</h3><p>如果过期就删除。假设redis里放了10万个key，都设置了过期时间，你每隔几百毫秒，就检查10万个key，那redis基本上就死了，cpu负载会很高的，消耗在你的检查过期key上了<br>但是问题是，定期删除可能会导致很多过期key到了时间并没有被删除掉，那咋整呢？所以就是惰性删除了。这就是说，在你获取某个key的时候，redis会检查一下 ，这个key如果设置了过期时间那么是否过期了？如果过期了此时就会删除，不会给你返回任何东西。<br>并不是key到时间就被删除掉，而是你查询这个key的时候，redis再懒惰的检查一下<br>通过上述两种手段结合起来，保证过期的key一定会被干掉。<br>所以说用了上述2种策略后，下面这种现象就不难解释了：<strong>数据明明都过期了，但是还占有着内存</strong></p>
-<h2 id="六、内存淘汰策略"><a href="#六、内存淘汰策略" class="headerlink" title="六、内存淘汰策略"></a>六、内存淘汰策略</h2><p>因为Redis将数据放到内存中，内存是有限的，比如redis就只能用10个G，你要是往里面写了20个G的数据，会咋办？当然会干掉10个G的数据，然后就保留10个G的数据了。那干掉哪些数据？保留哪些数据？当然是干掉不常用的数据，保留常用的数据了<br>Redis提供的内存淘汰策略有如下几种：</p>
-<ol>
-<li><p><strong>noeviction</strong> </p>
-<p>不会继续服务写请求 (DEL 请求可以继续服务)，读请求可以继续进行。这样可以保证不会丢失数据，但是会让线上的业务不能持续进行。这是默认的淘汰策略。</p>
-</li>
-<li><p><strong>volatile-lru</strong></p>
-<p>尝试淘汰设置了过期时间的 key，最少使用的 key 优先被淘汰。没有设置过期时间的 key 不会被淘汰，这样可以保证需要持久化的数据不会突然丢失。（这个是使用最多的）</p>
-</li>
-<li><p><strong>volatile-ttl</strong></p>
-<p>跟上面一样，除了淘汰的策略不是 LRU，而是 key 的剩余寿命 ttl 的值，ttl 越小越优先被淘汰。</p>
-</li>
-<li><p><strong>volatile-random</strong></p>
-<p>跟上面一样，不过淘汰的 key 是过期 key 集合中随机的 key。</p>
-</li>
-<li><p><strong>allkeys-lru</strong></p>
-<p>区别于 volatile-lru，这个策略要淘汰的 key 对象是全体的 key 集合，而不只是过期的 key 集合。这意味着没有设置过期时间的 key 也会被淘汰。v</p>
-</li>
-<li><p><strong>allkeys-random</strong></p>
-<p>跟上面一样，不过淘汰的策略是随机的 key。allkeys-random 跟上面一样，不过淘汰的策略是随机的 key。</p>
-</li>
-</ol>
-<h2 id="七、持久化策略"><a href="#七、持久化策略" class="headerlink" title="七、持久化策略"></a>七、持久化策略</h2><p>Redis的数据是存在内存中的，如果Redis发生宕机，那么数据会全部丢失，因此必须提供持久化机制。<br>Redis 的持久化机制有两种</p>
-<ul>
-<li><p><strong>快照（RDB）</strong></p>
-<p>快照是一次全量备份，AOF 日志是连续的增量备份。快照是内存数据的二进制序列化形式，在存储上非常紧凑，</p>
-</li>
-<li><p><strong>AOF 日志</strong></p>
-<p>而 AOF 日志记录的是内存数据修改的指令记录文本。AOF 日志在长期的运行过程中会变的无比庞大，数据库重启时需要加载 AOF 日志进行指令重放，这个时间就会无比漫长。所以需要定期进行 AOF 重写，给 AOF 日志进行瘦身。<br>RDB是通过Redis主进程fork子进程，让子进程执行磁盘 IO 操作来进行 RDB 持久化，AOF 日志存储的是 Redis 服务器的顺序指令序列，AOF 日志只记录对内存进行修改的指令记录。</p>
-</li>
-</ul>
-<blockquote>
-<p>即RDB记录的是数据，AOF记录的是指令</p>
-</blockquote>
-<h3 id="RDB和AOF到底该如何选择？"><a href="#RDB和AOF到底该如何选择？" class="headerlink" title="RDB和AOF到底该如何选择？"></a><strong>RDB和AOF到底该如何选择？</strong></h3><ol>
-<li>不要仅仅使用 RDB，因为那样会导致你丢失很多数据，因为RDB是隔一段时间来备份数据</li>
-<li>也不要仅仅使用 AOF，因为那样有两个问题，第一，通过 AOF 做冷备没有RDB恢复速度快; 第二，RDB 每次简单粗暴生成数据快照，更加健壮，可以避免 AOF 这种复杂的备份和恢复机制的 bug</li>
-<li>用RDB恢复内存状态会丢失很多数据，重放AOP日志又很慢。Redis4.0推出了混合持久化来解决这个问题。将 rdb 文件的内容和增量的 AOF 日志文件存在一起。这里的 AOF 日志不再是全量的日志，而是自持久化开始到持久化结束的这段时间发生的增量 AOF 日志，通常这部分 AOF 日志很小。于是在 Redis 重启的时候，可以先加载 rdb 的内容，然后再重放增量 AOF 日志就可以完全替代之前的 AOF 全量文件重放，重启效率因此大幅得到提升。</li>
-</ol>
-<h2 id="面试题"><a href="#面试题" class="headerlink" title="面试题"></a>面试题</h2><h3 id="1-缓存雪崩和缓存穿透"><a href="#1-缓存雪崩和缓存穿透" class="headerlink" title="1. 缓存雪崩和缓存穿透"></a>1. 缓存雪崩和缓存穿透</h3><h4 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h4><p>假设有如下一个系统，高峰期请求为5000次/秒，4000次走了缓存，只有1000次落到了数据库上，数据库每秒1000的并发是一个正常的指标，完全可以正常工作，但如果缓存宕机了，每秒5000次的请求会全部落到数据库上，数据库立马就死掉了，因为数据库一秒最多抗2000个请求，如果DBA重启数据库，立马又会被新的请求打死了，这就是缓存雪崩。</p>
-<p><strong>如何解决缓存雪崩</strong></p>
-<ul>
-<li>事前：redis高可用，主从+哨兵，redis cluster，避免全盘崩溃</li>
-<li>事中：本地ehcache缓存 + hystrix限流&amp;降级，避免MySQL被打死</li>
-<li>事后：redis持久化，快速恢复缓存数据</li>
-</ul>
-<h4 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h4><p>假如客户端每秒发送5000个请求，其中4000个为黑客的恶意攻击，即在数据库中也查不到。举个例子，用户id为正数，黑客构造的用户id为负数，<br>如果黑客每秒一直发送这4000个请求，缓存就不起作用，数据库也很快被打死。</p>
-<p><strong>如何解决缓存穿透</strong><br>查询不到的数据也放到缓存，value为空，如set -999 “”<br>总而言之，缓存雪崩就是缓存失效，请求全部全部打到数据库，数据库瞬间被打死。缓存穿透就是查询了一个一定不存在的数据，并且从存储层查不到的数据没有写入缓存，这将导致这个不存在的数据每次请求都要到存储层去查询，失去了缓存的意义</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/76496852">Redis不只是缓存，还有n多种你没发现的妙用</a></p>
-<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/deaidai/article/details/89061998">理解Redis缓存「穿透」「雪崩」「击穿」以及解决方案和分析</a></p>
-<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/61884327">关于Redis，学会这8点就够了</a></p>
-<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/67937182">Redis 如何保持和 MySQL 数据一致</a></p>
+<p>IDEA配置</p>
+<p>当我们修改了Java类后，IDEA默认是不自动编译的，而spring-boot-devtools又是监测classpath下的文件发生变化才会重启应用，所以需要设置IDEA的自动编译：</p>
+<p>（1）File-Settings-Compiler-Build Project automatically</p>
+<p>（2）ctrl + shift + alt + /,选择Registry,勾上 Compiler autoMake allow when app running</p>
+<p>你可以实时自动重启了</p>
 
     
 
@@ -970,7 +560,295 @@
 
     
     <p class="article-more-link">
-      <a class="article-more-a" href="/2020/09/18/Redis%E5%85%A5%E9%97%A8/">展开全文 >></a>
+      <a class="article-more-a" href="/2020/09/18/spring-boot%20%E7%BB%8F%E5%85%B8%E5%B8%83%E5%B1%80%20%E5%8F%8A%20%E5%90%AF%E5%8A%A8%E9%85%8D%E7%BD%AE/">展开全文 >></a>
+    </p>
+    
+
+    
+    <div class="clearfix"></div>
+  </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-tomcat中html乱码问题" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+  <div class="article-entry" itemprop="articleBody">
+    
+    <h2 id="tomcat中html乱码问题下面的配置都在conf文件夹里面配置"><a href="#tomcat中html乱码问题下面的配置都在conf文件夹里面配置" class="headerlink" title="tomcat中html乱码问题下面的配置都在conf文件夹里面配置"></a>tomcat中html乱码问题下面的配置都在conf文件夹里面配置</h2><ol>
+<li>在web.xml中配置<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mime-mapping</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">extension</span>&gt;</span>htm<span class="tag">&lt;/<span class="name">extension</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mime-type</span>&gt;</span>text/html;charset=UTF-8<span class="tag">&lt;/<span class="name">mime-type</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">mime-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">mime-mapping</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">extension</span>&gt;</span>html<span class="tag">&lt;/<span class="name">extension</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mime-type</span>&gt;</span>text/html;charset=UTF-8<span class="tag">&lt;/<span class="name">mime-type</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">mime-mapping</span>&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>Tomcat server.xml中设置编码Tomcat<br>添加一个 URIEncoding=”UTF-8”<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">port</span>=<span class="string">&quot;8080&quot;</span> <span class="attr">protocol</span>=<span class="string">&quot;HTTP/1.1&quot;</span>  <span class="attr">connectionTimeout</span>=<span class="string">&quot;20000&quot;</span></span></span><br><span class="line"><span class="tag">         <span class="attr">redirectPort</span>=<span class="string">&quot;8443&quot;</span> <span class="attr">URIEncoding</span>=<span class="string">&quot;UTF-8&quot;</span>/&gt;</span></span><br></pre></td></tr></table></figure></li>
+<li>在idea中配置<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Dfile.encoding&#x3D;UTF8</span><br></pre></td></tr></table></figure>
+<img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/tomcat1_1574570030361.jpeg" alt="tomcat1.jpeg"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/tomcat2_1574570035567.jpeg" alt="tomcat2.jpeg"></li>
+</ol>
+
+    
+
+    
+
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
+    
+
+    
+    <p class="article-more-link">
+      <a class="article-more-a" href="/2020/09/18/tomcat%E4%B8%ADhtml%E4%B9%B1%E7%A0%81%E9%97%AE%E9%A2%98/">展开全文 >></a>
+    </p>
+    
+
+    
+    <div class="clearfix"></div>
+  </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-vue使用xlsx-populate读写Excel表格" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+  <div class="article-entry" itemprop="articleBody">
+    
+    <h2 id="vue使用xlsx-populate读写Excel表格-依赖"><a href="#vue使用xlsx-populate读写Excel表格-依赖" class="headerlink" title="vue使用xlsx-populate读写Excel表格## 依赖"></a>vue使用xlsx-populate读写Excel表格## 依赖</h2><p><a target="_blank" rel="noopener" href="https://www.npmjs.com/package/xlsx-populate">https://www.npmjs.com/package/xlsx-populate</a></p>
+<h2 id="读取文件"><a href="#读取文件" class="headerlink" title="读取文件"></a>读取文件</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 读取表格数据</span></span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    let _this = <span class="keyword">this</span>;</span><br><span class="line">    <span class="keyword">this</span>.tableData = [];</span><br><span class="line">    <span class="keyword">this</span>.isCheck = <span class="keyword">true</span>;</span><br><span class="line">    XlsxPopulate.fromDataAsync(file).then(workbook =&gt; &#123;</span><br><span class="line">        let values = workbook.sheet(<span class="number">0</span>).usedRange().value();</span><br><span class="line">        window.console.log(values);</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(err =&gt; &#123;</span><br><span class="line">        window.console.error(err);</span><br><span class="line">        _this.$message.error(<span class="string">&quot;读取文件错误&quot;</span>);</span><br><span class="line">        <span class="comment">// 设置表格加载状态</span></span><br><span class="line">        _this.tableLoading = <span class="keyword">false</span>;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 导出</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> data 导出数据</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fileName 文件名</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> type 后缀名</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">exportAccesses(data, fileName, type)&#123;</span><br><span class="line">    <span class="comment">// 1.设计表头</span></span><br><span class="line">    let row1 = [<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxxx&quot;</span>]</span><br><span class="line">    data.unshift(row1);</span><br><span class="line">    let workbook = XlsxPopulate.fromBlankAsync().then(workbook =&gt; &#123;</span><br><span class="line">        <span class="comment">//获取第一个工作表</span></span><br><span class="line">        <span class="keyword">var</span> sheet = workbook.sheet(<span class="number">0</span>);</span><br><span class="line">        <span class="comment">//设置值</span></span><br><span class="line">        sheet.cell(<span class="string">&quot;A1&quot;</span>).value(data).style(&#123;</span><br><span class="line">            border: <span class="keyword">true</span></span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="comment">//设置单元格合并</span></span><br><span class="line">        sheet.range(<span class="string">&quot;A1:E1&quot;</span>).merged(<span class="keyword">true</span>)</span><br><span class="line">        <span class="comment">//设置表头填充样式</span></span><br><span class="line">        <span class="keyword">for</span> (let i = <span class="number">1</span>; i &lt;= <span class="number">2</span>; i++) &#123;</span><br><span class="line">            let cells = sheet.row(i)._cells;</span><br><span class="line">            <span class="keyword">for</span> (let j = <span class="number">1</span>; j &lt; cells.length; j++) &#123;</span><br><span class="line">                cells[j].style(<span class="string">&quot;fill&quot;</span>, <span class="string">&quot;ddebf7&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//导出</span></span><br><span class="line">        <span class="keyword">return</span> workbook.outputAsync().then(blob =&gt; &#123;</span><br><span class="line">            type = undefined === type ? <span class="string">&quot;xlsx&quot;</span> : type;</span><br><span class="line">            <span class="keyword">this</span>.$fileUtils.saveFile(blob, fileName + <span class="string">&quot;.&quot;</span> + type);</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(function (err) &#123;</span><br><span class="line">        window.console.log(err.message || err);</span><br><span class="line">        <span class="keyword">throw</span> err;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    
+
+    
+
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
+    
+
+    
+    <p class="article-more-link">
+      <a class="article-more-a" href="/2020/09/18/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/">展开全文 >></a>
+    </p>
+    
+
+    
+    <div class="clearfix"></div>
+  </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-vue在触发事件时附加自定义参数" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+  <div class="article-entry" itemprop="articleBody">
+    
+    <h2 id="vue在触发事件时附加自定义参数以ElementUI的分页组件为例，"><a href="#vue在触发事件时附加自定义参数以ElementUI的分页组件为例，" class="headerlink" title="vue在触发事件时附加自定义参数以ElementUI的分页组件为例，"></a>vue在触发事件时附加自定义参数以<code>ElementUI</code>的分页组件为例，</h2><p>我们找个事件<br>比如</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-pagination</span><br><span class="line">  small</span><br><span class="line">  layout&#x3D;&quot;prev, pager, next&quot;</span><br><span class="line">  :current-change&#x3D;&#39;changePage&#39;</span><br><span class="line">  :total&#x3D;&quot;50&quot;&gt;</span><br><span class="line">&lt;&#x2F;el-pagination&gt;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * currentPage 改变时会触发</span><br><span class="line"> * @param index 当前页</span><br><span class="line"> *&#x2F;</span><br><span class="line">changePage(index)&#123;</span><br><span class="line">    console.log(index);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如上述代码，我们触发分页的事件后，changePage方法只能接受到一个index参数，如果我们修改成以下写法就会报错。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">:current-change&#x3D;&#39;changePage(index, id)&#39;</span><br></pre></td></tr></table></figure>
+<h3 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h3><p>使用ES写法解决</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">:current-change&#x3D;&#39;(index) &#x3D;&gt; &#123;changePage(index, id)&#125;&#39;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">changePage(index, id)&#123;</span><br><span class="line">   console.log(index);</span><br><span class="line">   console.log(id);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+    
+
+    
+
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
+    
+
+    
+    <p class="article-more-link">
+      <a class="article-more-a" href="/2020/09/18/vue%E5%9C%A8%E8%A7%A6%E5%8F%91%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%99%84%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%82%E6%95%B0/">展开全文 >></a>
+    </p>
+    
+
+    
+    <div class="clearfix"></div>
+  </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-vue读取json文件和下载文件" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+  <div class="article-entry" itemprop="articleBody">
+    
+    <h2 id="vue读取json文件和下载文件-读取json文件"><a href="#vue读取json文件和下载文件-读取json文件" class="headerlink" title="vue读取json文件和下载文件## 读取json文件"></a>vue读取json文件和下载文件## 读取json文件</h2><ol>
+<li>获取file文件<br> 具体步骤不说了，input上传文件或者elementUI上传文件都可以，只要拿到file对象就可以了</li>
+<li>读取内容<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">let file &#x3D; &quot;获取file文件对象&quot;;</span><br><span class="line">let reader &#x3D; new FileReader();</span><br><span class="line">reader.readAsText(file, &quot;UTF-8&quot;);</span><br><span class="line">reader.onload &#x3D; function (e) &#123;</span><br><span class="line">    let data &#x3D; JSON.parse(e.target.result);</span><br><span class="line">    &#x2F;&#x2F; 打印json数据</span><br><span class="line">    window.console.log(data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h2 id="下载文件"><a href="#下载文件" class="headerlink" title="下载文件"></a>下载文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">let services &#x3D; &#123;&quot;key&quot;: &quot;value&quot;&#125;;</span><br><span class="line">let data &#x3D; JSON.stringify(services);</span><br><span class="line">let blob &#x3D; new Blob([data], &#123;type: &#39;text&#x2F;plain;charset&#x3D;utf-8&#39;&#125;);</span><br><span class="line">&#x2F;&#x2F; json或者txt都可以</span><br><span class="line">let fileName &#x3D; &#39;文件名.json&#39;;</span><br><span class="line">FileSaver.saveAs(blob, fileName);</span><br></pre></td></tr></table></figure>
+
+    
+
+    
+
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
+    
+
+    
+    <p class="article-more-link">
+      <a class="article-more-a" href="/2020/09/18/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/">展开全文 >></a>
+    </p>
+    
+
+    
+    <div class="clearfix"></div>
+  </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-vue配合ElementUI导入导出excel表格" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+  <div class="article-entry" itemprop="articleBody">
+    
+    <h2 id="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"><a href="#vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件" class="headerlink" title="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"></a>vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件</h2><h1 id="导入"><a href="#导入" class="headerlink" title="导入"></a>导入</h1><h2 id="1-导入依赖"><a href="#1-导入依赖" class="headerlink" title="1. 导入依赖"></a>1. 导入依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm install -S file-saver xlsx</span><br><span class="line">npm install -D script-loader</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>import XLSX from ‘xlsx’</p>
+</blockquote>
+<h2 id="2-ElementUI上传文件代码"><a href="#2-ElementUI上传文件代码" class="headerlink" title="2.ElementUI上传文件代码"></a>2.ElementUI上传文件代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-upload</span><br><span class="line">        class&#x3D;&quot;upload-demo&quot;</span><br><span class="line">        :action&#x3D;&quot;&#39;service&#x2F;plugins&#x2F;policies&#x2F;importExcel&#x2F;&#39; + plugin&quot;</span><br><span class="line">        :on-change&#x3D;&quot;upLoad&quot;</span><br><span class="line">        :limit&#x3D;&quot;1&quot;</span><br><span class="line">        accept&#x3D;&quot;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet,application&#x2F;vnd.ms-excel&quot;</span><br><span class="line">        :auto-upload&#x3D;&quot;false&quot;</span><br><span class="line">        :file-list&#x3D;&quot;config.data&quot;&gt;</span><br><span class="line">    &lt;el-button size&#x3D;&quot;small&quot; type&#x3D;&quot;primary&quot;&gt;选择文件&lt;&#x2F;el-button&gt;</span><br><span class="line">    &lt;div slot&#x3D;&quot;tip&quot; class&#x3D;&quot;el-upload__tip&quot;&gt;只能上传xls&#x2F;xlsx文件&lt;&#x2F;div&gt;</span><br><span class="line">&lt;&#x2F;el-upload&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="3-js代码"><a href="#3-js代码" class="headerlink" title="3.js代码"></a>3.js代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">upLoad(file, fileList) &#123;</span><br><span class="line">    let fileTemp &#x3D; file.raw;</span><br><span class="line">    if (fileTemp) &#123;</span><br><span class="line">        if ((fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet&#39;)</span><br><span class="line">            || (fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.ms-excel&#39;)) &#123;</span><br><span class="line">            this.readExcelFile(fileTemp);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            this.$message(&#123;</span><br><span class="line">                type: &#39;warning&#39;,</span><br><span class="line">                message: &#39;附件格式错误，请删除后重新上传！&#39;</span><br><span class="line">            &#125;)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        this.$message(&#123;</span><br><span class="line">            type: &#39;warning&#39;,</span><br><span class="line">            message: &#39;请上传附件！&#39;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#x2F;&#x2F; 主要方法</span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    &#x2F;&#x2F; 通过DOM取文件数据</span><br><span class="line">    var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">    var reader &#x3D; new FileReader();</span><br><span class="line">    FileReader.prototype.readAsBinaryString &#x3D; function (file) &#123;</span><br><span class="line">        var binary &#x3D; &quot;&quot;;</span><br><span class="line">        var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">        var workbook; &#x2F;&#x2F;读取完成的数据</span><br><span class="line">        var outdata;</span><br><span class="line">        var reader &#x3D; new FileReader();</span><br><span class="line">        reader.onload &#x3D; function (e) &#123;</span><br><span class="line">            var bytes &#x3D; new Uint8Array(reader.result);</span><br><span class="line">            var length &#x3D; bytes.byteLength;</span><br><span class="line">            for (var i &#x3D; 0; i &lt; length; i++) &#123;</span><br><span class="line">                binary +&#x3D; String.fromCharCode(bytes[i]);</span><br><span class="line">            &#125;</span><br><span class="line">            var XLSX &#x3D; require(&#39;xlsx&#39;);</span><br><span class="line">            if (rABS) &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(btoa(fixdata(binary)), &#123; &#x2F;&#x2F;手动转化</span><br><span class="line">                    type: &#39;base64&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(binary, &#123;</span><br><span class="line">                    type: &#39;binary&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125;</span><br><span class="line">            outdata &#x3D; XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);</span><br><span class="line"></span><br><span class="line">            window.console.log(&quot;表格参数:&quot; + workbook);</span><br><span class="line">            window.console.log(&quot;数据:&quot; + outdata);</span><br><span class="line">        &#125;;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    if (rABS) &#123;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        reader.readAsBinaryString(file);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+
+<h1 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zfz5720/article/details/90676359">vue使用xlsx修改样式导出excel</a></p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000018993619?utm_source=tag-newest">Vue+Element前端导入导出Excel</a></p>
+
+    
+
+    
+
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
+    
+
+    
+    <p class="article-more-link">
+      <a class="article-more-a" href="/2020/09/18/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/">展开全文 >></a>
     </p>
     
 
