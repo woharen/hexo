@@ -9,7 +9,7 @@ toc: true
 
 ## cookie
 
-```
+```javascript
 /**
  * 获取cookie
  * @param {string} key cookie键

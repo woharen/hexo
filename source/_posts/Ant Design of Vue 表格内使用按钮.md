@@ -1,5 +1,10 @@
-## Ant Design of Vue 表格内使用按钮上代码
-```
+---
+title: Ant Design of Vue 表格内使用按钮代码
+date: 2019.07.01 10:06
+---
+
+
+```vue
 
 <template>
     <div>
@@ -108,4 +113,3 @@ export default {
 <style scoped="scoped">
 </style>
 ```
-
