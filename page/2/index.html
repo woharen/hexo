@@ -64,10 +64,40 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-Redis实现Redlock分布式锁" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/27/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="Redis实现Redlock分布式锁-依赖"><a href="#Redis实现Redlock分布式锁-依赖" class="headerlink" title="Redis实现Redlock分布式锁## 依赖"></a>Redis实现Redlock分布式锁## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--Springboot环境下 redis分布式锁 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson-spring-boot-starter<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- Springboot环境下 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//创建连接1</span></span><br><span class="line">    RedissonClient redissonClient1 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//创建连接2</span></span><br><span class="line">    RedissonClient redissonClient2 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">1</span>);</span><br><span class="line">    <span class="comment">//创建连接3</span></span><br><span class="line">    RedissonClient redissonClient3 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">2</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//设置锁的key</span></span><br><span class="line">    String resourceName = <span class="string">&quot;REDLOCK_KEY&quot;</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//获取锁</span></span><br><span class="line">    RLock lock1 = redissonClient1.getLock(resourceName);</span><br><span class="line">    RLock lock2 = redissonClient2.getLock(resourceName);</span><br><span class="line">    RLock lock3 = redissonClient3.getLock(resourceName);</span><br><span class="line">    <span class="comment">// 向3个redis实例尝试加锁</span></span><br><span class="line">    RedissonRedLock redLock = <span class="keyword">new</span> RedissonRedLock(lock1, lock2, lock3);</span><br><span class="line">    <span class="keyword">boolean</span> isLock;</span><br><span class="line">    </span><br><span class="line">    List&lt;MaxLimitRankingVo&gt; list = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 500ms拿不到锁, 就认为获取锁失败。10000ms即10s是锁失效时间。</span></span><br><span class="line">        isLock = redLock.tryLock(<span class="number">500</span>, <span class="number">10000</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        System.out.println(<span class="string">&quot;isLock = &quot;</span>+isLock);</span><br><span class="line">        <span class="keyword">if</span> (isLock) &#123;</span><br><span class="line">            Thread.sleep(<span class="number">8000</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// 无论如何, 最后都要解锁</span></span><br><span class="line">        redLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取 RedissonClient</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> RedissonClient <span class="title">getRedissonClient</span><span class="params">(String address, <span class="keyword">int</span> database)</span></span>&#123;</span><br><span class="line">    Config config = <span class="keyword">new</span> Config();</span><br><span class="line">    config.useSingleServer().setAddress(address).setDatabase(database);</span><br><span class="line">    <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="文档参考"><a href="#文档参考" class="headerlink" title="文档参考"></a>文档参考</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/60309808">Redis分布式锁的正确实现方式</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/27/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" data-id="ckfki6ake000g3bnk32nidd3o" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-VUE.JS 组件component" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -140,7 +170,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckfg68eat000h2nty3zshgyvq" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckfki6ake000h3bnkhh1p5syy" class="article-share-link">Share</a>
       
       
     </footer>
@@ -152,8 +182,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-VUE修改数据后不自动渲染" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -178,7 +208,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckfg68eau000j2nty4rvq1i4i" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckfki6akf000j3bnk7qy237jk" class="article-share-link">Share</a>
       
       
     </footer>
@@ -190,8 +220,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-Vue父子组件互调方法" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -210,7 +240,42 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckfg68eav000k2nty9lp54vnd" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckfki6akg000k3bnkac540q2x" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-vue配合ElementUI导入导出excel表格" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2020/09/27/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"><a href="#vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件" class="headerlink" title="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"></a>vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件</h2><h1 id="导入"><a href="#导入" class="headerlink" title="导入"></a>导入</h1><h2 id="1-导入依赖"><a href="#1-导入依赖" class="headerlink" title="1. 导入依赖"></a>1. 导入依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm install -S file-saver xlsx</span><br><span class="line">npm install -D script-loader</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>import XLSX from ‘xlsx’</p>
+</blockquote>
+<h2 id="2-ElementUI上传文件代码"><a href="#2-ElementUI上传文件代码" class="headerlink" title="2.ElementUI上传文件代码"></a>2.ElementUI上传文件代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-upload</span><br><span class="line">        class&#x3D;&quot;upload-demo&quot;</span><br><span class="line">        :action&#x3D;&quot;&#39;service&#x2F;plugins&#x2F;policies&#x2F;importExcel&#x2F;&#39; + plugin&quot;</span><br><span class="line">        :on-change&#x3D;&quot;upLoad&quot;</span><br><span class="line">        :limit&#x3D;&quot;1&quot;</span><br><span class="line">        accept&#x3D;&quot;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet,application&#x2F;vnd.ms-excel&quot;</span><br><span class="line">        :auto-upload&#x3D;&quot;false&quot;</span><br><span class="line">        :file-list&#x3D;&quot;config.data&quot;&gt;</span><br><span class="line">    &lt;el-button size&#x3D;&quot;small&quot; type&#x3D;&quot;primary&quot;&gt;选择文件&lt;&#x2F;el-button&gt;</span><br><span class="line">    &lt;div slot&#x3D;&quot;tip&quot; class&#x3D;&quot;el-upload__tip&quot;&gt;只能上传xls&#x2F;xlsx文件&lt;&#x2F;div&gt;</span><br><span class="line">&lt;&#x2F;el-upload&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="3-js代码"><a href="#3-js代码" class="headerlink" title="3.js代码"></a>3.js代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">upLoad(file, fileList) &#123;</span><br><span class="line">    let fileTemp &#x3D; file.raw;</span><br><span class="line">    if (fileTemp) &#123;</span><br><span class="line">        if ((fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet&#39;)</span><br><span class="line">            || (fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.ms-excel&#39;)) &#123;</span><br><span class="line">            this.readExcelFile(fileTemp);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            this.$message(&#123;</span><br><span class="line">                type: &#39;warning&#39;,</span><br><span class="line">                message: &#39;附件格式错误，请删除后重新上传！&#39;</span><br><span class="line">            &#125;)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        this.$message(&#123;</span><br><span class="line">            type: &#39;warning&#39;,</span><br><span class="line">            message: &#39;请上传附件！&#39;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#x2F;&#x2F; 主要方法</span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    &#x2F;&#x2F; 通过DOM取文件数据</span><br><span class="line">    var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">    var reader &#x3D; new FileReader();</span><br><span class="line">    FileReader.prototype.readAsBinaryString &#x3D; function (file) &#123;</span><br><span class="line">        var binary &#x3D; &quot;&quot;;</span><br><span class="line">        var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">        var workbook; &#x2F;&#x2F;读取完成的数据</span><br><span class="line">        var outdata;</span><br><span class="line">        var reader &#x3D; new FileReader();</span><br><span class="line">        reader.onload &#x3D; function (e) &#123;</span><br><span class="line">            var bytes &#x3D; new Uint8Array(reader.result);</span><br><span class="line">            var length &#x3D; bytes.byteLength;</span><br><span class="line">            for (var i &#x3D; 0; i &lt; length; i++) &#123;</span><br><span class="line">                binary +&#x3D; String.fromCharCode(bytes[i]);</span><br><span class="line">            &#125;</span><br><span class="line">            var XLSX &#x3D; require(&#39;xlsx&#39;);</span><br><span class="line">            if (rABS) &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(btoa(fixdata(binary)), &#123; &#x2F;&#x2F;手动转化</span><br><span class="line">                    type: &#39;base64&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(binary, &#123;</span><br><span class="line">                    type: &#39;binary&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125;</span><br><span class="line">            outdata &#x3D; XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);</span><br><span class="line"></span><br><span class="line">            window.console.log(&quot;表格参数:&quot; + workbook);</span><br><span class="line">            window.console.log(&quot;数据:&quot; + outdata);</span><br><span class="line">        &#125;;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    if (rABS) &#123;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        reader.readAsBinaryString(file);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+
+<h1 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zfz5720/article/details/90676359">vue使用xlsx修改样式导出excel</a></p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000018993619?utm_source=tag-newest">Vue+Element前端导入导出Excel</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2020/09/27/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" data-id="ckfki6al200193bnkhhwjhdux" class="article-share-link">Share</a>
       
       
     </footer>
@@ -222,8 +287,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-git 和 svn 的区别" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -280,7 +345,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckfg68eaw000l2nty5m2k7ajo" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckfki6aki000n3bnk9cd1c7ne" class="article-share-link">Share</a>
       
       
     </footer>
@@ -290,10 +355,10 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
 
 
   
-    <article id="post-Centos7下docker使用" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-git和svn提交时怎么忽略文件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -302,67 +367,24 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="Centos7下docker使用-安装"><a href="#Centos7下docker使用-安装" class="headerlink" title="Centos7下docker使用## 安装"></a>Centos7下docker使用## 安装</h2><ol>
-<li><p>安装需要的软件包</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install -y yum-utils device-mapper-persistent-data </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>设置yum源 </p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum-config-manager --add-repo</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>查看docker版本</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum list docker-ce --showduplicates | sort -r</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>安装docker</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install docker-ce-版本号</span><br></pre></td></tr></table></figure>
-
-</li>
+        <h2 id="git和svn提交时怎么忽略文件-git"><a href="#git和svn提交时怎么忽略文件-git" class="headerlink" title="git和svn提交时怎么忽略文件## git"></a>git和svn提交时怎么忽略文件## git</h2><ol>
+<li>在项目根目录下创建<code>.gitignore</code>文件</li>
+<li>在<code>.gitignore</code>文件中添加要屏蔽的文件 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 指定文件</span><br><span class="line">xxx.text</span><br><span class="line"># 指定文件夹</span><br><span class="line">dir</span><br><span class="line"># 匹配后缀名为 txt的文件</span><br><span class="line">*.txt</span><br></pre></td></tr></table></figure>
+<h2 id="svn"><a href="#svn" class="headerlink" title="svn"></a>svn</h2></li>
+<li>打开SVN的Version Control中的Local Changes下的Configure Ignored Files<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn1_1574652846178.png" alt="svn1.png"></li>
+<li>增加特定文件或文件夹<br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/SVN_1574652823070.png" alt="SVN"><br><img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn3_1574652904330.png" alt="svn3.png"></li>
 </ol>
-<h2 id="容器使用"><a href="#容器使用" class="headerlink" title="容器使用"></a>容器使用</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 启动</span></span><br><span class="line">systemctl start docker</span><br><span class="line"><span class="meta">#</span><span class="bash"> 停止</span></span><br><span class="line">systemctl stop docker</span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看所有容器的状态</span></span><br><span class="line">docker ps -a</span><br></pre></td></tr></table></figure>
-
-<h3 id="查看容器"><a href="#查看容器" class="headerlink" title="查看容器"></a>查看容器</h3><ul>
-<li><p>docker ps</p>
-<p> 查看当前正在运行的容器 </p>
-</li>
-<li><p>docker ps -a</p>
-<p>查看所有容器的状态</p>
-</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 容器编号      图片     命令      已创建    状态    映射端口  名字</span><br><span class="line">CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS   PORTS   NAMES</span><br></pre></td></tr></table></figure>
-
-<h3 id="操作容器"><a href="#操作容器" class="headerlink" title="操作容器"></a>操作容器</h3><ul>
-<li><p>docker start|stop|restart   id/name</p>
-<p>根据id或者name启动、停止、重启容器</p>
-<ul>
-<li><strong>-d</strong> 后台运行容器</li>
-<li><strong>-p 8800:80</strong> 指定对外暴露的端口，容器内部用80，对外8800 </li>
-<li><strong>–name</strong> 指定容器的名字</li>
-</ul>
-</li>
-<li><p>docker rm id/name</p>
-<p>删除某个容器</p>
-</li>
-<li><p>docker rename old_name new_name </p>
-<p>给这个容器命名。再次启动或停止容器时，就可以直接使用这个名字。 </p>
-</li>
-</ul>
-<h2 id="镜像使用"><a href="#镜像使用" class="headerlink" title="镜像使用"></a>镜像使用</h2><h3 id="查看镜像"><a href="#查看镜像" class="headerlink" title="查看镜像"></a>查看镜像</h3><ul>
-<li><p>docker images</p>
-<p>查看所有镜像</p>
-</li>
-</ul>
-<h3 id="操作镜像"><a href="#操作镜像" class="headerlink" title="操作镜像"></a>操作镜像</h3><ul>
-<li><p>docker run 镜像名</p>
-<p>将进行放到容器中， 变成运行时容器 </p>
-</li>
-<li><p>docker rmi id/name </p>
-<p>删除某个镜像 </p>
-</li>
-</ul>
+<p>新版本如下</p>
+<ol>
+<li>打开 Settings→Editor→File Types</li>
+<li>在窗口最下方“Ignore files and folders”一栏中添加如下忽略： </li>
+<li>注意要用英文<code>;</code>符号隔开<br> <img src="https://myblog-1252842020.cos.ap-guangzhou.myqcloud.com/svn4_1574653034383.png" alt="svn4.png"></li>
+</ol>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/" data-id="ckfg68eaj00042ntyckde9nlu" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckfki6akj000q3bnk7ddkdrdn" class="article-share-link">Share</a>
       
       
     </footer>
@@ -374,8 +396,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-idea 下 springboot 热部署" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -395,7 +417,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckfg68eax000p2ntyduyyhk7r" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckfki6akk000r3bnkd2eadfay" class="article-share-link">Share</a>
       
       
     </footer>
@@ -407,8 +429,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-idea自用插件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -437,7 +459,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckfg68eay000q2nty9qe1beot" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckfki6akk000s3bnk81ac30p1" class="article-share-link">Share</a>
       
       
     </footer>
@@ -447,10 +469,10 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
 
 
   
-    <article id="post-vue配合ElementUI导入导出excel表格" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-vue读取json文件和下载文件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/24/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
+    <a href="/2020/09/27/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/" class="article-date">
+  <time datetime="2020-09-27T02:47:32.543Z" itemprop="datePublished">2020-09-27</time>
 </a>
     
   </div>
@@ -459,211 +481,18 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"><a href="#vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件" class="headerlink" title="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"></a>vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件</h2><h1 id="导入"><a href="#导入" class="headerlink" title="导入"></a>导入</h1><h2 id="1-导入依赖"><a href="#1-导入依赖" class="headerlink" title="1. 导入依赖"></a>1. 导入依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm install -S file-saver xlsx</span><br><span class="line">npm install -D script-loader</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>import XLSX from ‘xlsx’</p>
-</blockquote>
-<h2 id="2-ElementUI上传文件代码"><a href="#2-ElementUI上传文件代码" class="headerlink" title="2.ElementUI上传文件代码"></a>2.ElementUI上传文件代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-upload</span><br><span class="line">        class&#x3D;&quot;upload-demo&quot;</span><br><span class="line">        :action&#x3D;&quot;&#39;service&#x2F;plugins&#x2F;policies&#x2F;importExcel&#x2F;&#39; + plugin&quot;</span><br><span class="line">        :on-change&#x3D;&quot;upLoad&quot;</span><br><span class="line">        :limit&#x3D;&quot;1&quot;</span><br><span class="line">        accept&#x3D;&quot;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet,application&#x2F;vnd.ms-excel&quot;</span><br><span class="line">        :auto-upload&#x3D;&quot;false&quot;</span><br><span class="line">        :file-list&#x3D;&quot;config.data&quot;&gt;</span><br><span class="line">    &lt;el-button size&#x3D;&quot;small&quot; type&#x3D;&quot;primary&quot;&gt;选择文件&lt;&#x2F;el-button&gt;</span><br><span class="line">    &lt;div slot&#x3D;&quot;tip&quot; class&#x3D;&quot;el-upload__tip&quot;&gt;只能上传xls&#x2F;xlsx文件&lt;&#x2F;div&gt;</span><br><span class="line">&lt;&#x2F;el-upload&gt;</span><br></pre></td></tr></table></figure>
-<h2 id="3-js代码"><a href="#3-js代码" class="headerlink" title="3.js代码"></a>3.js代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">upLoad(file, fileList) &#123;</span><br><span class="line">    let fileTemp &#x3D; file.raw;</span><br><span class="line">    if (fileTemp) &#123;</span><br><span class="line">        if ((fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet&#39;)</span><br><span class="line">            || (fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.ms-excel&#39;)) &#123;</span><br><span class="line">            this.readExcelFile(fileTemp);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            this.$message(&#123;</span><br><span class="line">                type: &#39;warning&#39;,</span><br><span class="line">                message: &#39;附件格式错误，请删除后重新上传！&#39;</span><br><span class="line">            &#125;)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        this.$message(&#123;</span><br><span class="line">            type: &#39;warning&#39;,</span><br><span class="line">            message: &#39;请上传附件！&#39;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#x2F;&#x2F; 主要方法</span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    &#x2F;&#x2F; 通过DOM取文件数据</span><br><span class="line">    var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">    var reader &#x3D; new FileReader();</span><br><span class="line">    FileReader.prototype.readAsBinaryString &#x3D; function (file) &#123;</span><br><span class="line">        var binary &#x3D; &quot;&quot;;</span><br><span class="line">        var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">        var workbook; &#x2F;&#x2F;读取完成的数据</span><br><span class="line">        var outdata;</span><br><span class="line">        var reader &#x3D; new FileReader();</span><br><span class="line">        reader.onload &#x3D; function (e) &#123;</span><br><span class="line">            var bytes &#x3D; new Uint8Array(reader.result);</span><br><span class="line">            var length &#x3D; bytes.byteLength;</span><br><span class="line">            for (var i &#x3D; 0; i &lt; length; i++) &#123;</span><br><span class="line">                binary +&#x3D; String.fromCharCode(bytes[i]);</span><br><span class="line">            &#125;</span><br><span class="line">            var XLSX &#x3D; require(&#39;xlsx&#39;);</span><br><span class="line">            if (rABS) &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(btoa(fixdata(binary)), &#123; &#x2F;&#x2F;手动转化</span><br><span class="line">                    type: &#39;base64&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(binary, &#123;</span><br><span class="line">                    type: &#39;binary&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125;</span><br><span class="line">            outdata &#x3D; XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);</span><br><span class="line"></span><br><span class="line">            window.console.log(&quot;表格参数:&quot; + workbook);</span><br><span class="line">            window.console.log(&quot;数据:&quot; + outdata);</span><br><span class="line">        &#125;;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    if (rABS) &#123;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        reader.readAsBinaryString(file);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+        <h2 id="vue读取json文件和下载文件-读取json文件"><a href="#vue读取json文件和下载文件-读取json文件" class="headerlink" title="vue读取json文件和下载文件## 读取json文件"></a>vue读取json文件和下载文件## 读取json文件</h2><ol>
+<li>获取file文件<br> 具体步骤不说了，input上传文件或者elementUI上传文件都可以，只要拿到file对象就可以了</li>
+<li>读取内容<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">let file &#x3D; &quot;获取file文件对象&quot;;</span><br><span class="line">let reader &#x3D; new FileReader();</span><br><span class="line">reader.readAsText(file, &quot;UTF-8&quot;);</span><br><span class="line">reader.onload &#x3D; function (e) &#123;</span><br><span class="line">    let data &#x3D; JSON.parse(e.target.result);</span><br><span class="line">    &#x2F;&#x2F; 打印json数据</span><br><span class="line">    window.console.log(data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h1 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zfz5720/article/details/90676359">vue使用xlsx修改样式导出excel</a></p>
-<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000018993619?utm_source=tag-newest">Vue+Element前端导入导出Excel</a></p>
+</li>
+</ol>
+<h2 id="下载文件"><a href="#下载文件" class="headerlink" title="下载文件"></a>下载文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">let services &#x3D; &#123;&quot;key&quot;: &quot;value&quot;&#125;;</span><br><span class="line">let data &#x3D; JSON.stringify(services);</span><br><span class="line">let blob &#x3D; new Blob([data], &#123;type: &#39;text&#x2F;plain;charset&#x3D;utf-8&#39;&#125;);</span><br><span class="line">&#x2F;&#x2F; json或者txt都可以</span><br><span class="line">let fileName &#x3D; &#39;文件名.json&#39;;</span><br><span class="line">FileSaver.saveAs(blob, fileName);</span><br></pre></td></tr></table></figure>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" data-id="ckfg68ebf00162nty7yspcgjh" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-java 发邮件 javax.mail" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/24/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="java-发邮件-javax-mail-依赖"><a href="#java-发邮件-javax-mail-依赖" class="headerlink" title="java 发邮件 javax.mail## 依赖"></a>java 发邮件 javax.mail## 依赖</h2><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;dependency&gt;</span><br><span class="line">    &lt;groupId&gt;com.sun.mail&lt;/groupId&gt;</span><br><span class="line">    &lt;artifactId&gt;javax.mail&lt;/artifactId&gt;</span><br><span class="line">    &lt;version&gt;1.5.5&lt;/version&gt;</span><br><span class="line">&lt;/dependency&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="代码演示"><a href="#代码演示" class="headerlink" title="代码演示"></a>代码演示</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.panshi.utils;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.mail.*;</span><br><span class="line"><span class="keyword">import</span> javax.mail.internet.InternetAddress;</span><br><span class="line"><span class="keyword">import</span> javax.mail.internet.MimeMessage;</span><br><span class="line"><span class="keyword">import</span> java.util.Date;</span><br><span class="line"><span class="keyword">import</span> java.util.Properties;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span>: 发送邮箱验证码类</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span>: 蒋文豪</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@create</span>: 2019/06/13</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SendEmail</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SMTPSERVER = <span class="string">&quot;smtp.163.com&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SMTPPORT = <span class="string">&quot;465&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String ACCOUT = <span class="string">&quot;xxx@163.com&quot;</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String PWD = <span class="string">&quot;密码&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 发送验证码</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> code 验证码</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">sendVerification</span><span class="params">(String address, String code)</span></span>&#123;</span><br><span class="line">        <span class="comment">// 创建邮件配置</span></span><br><span class="line">        Properties props = <span class="keyword">new</span> Properties();</span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.transport.protocol&quot;</span>, <span class="string">&quot;smtp&quot;</span>); <span class="comment">// 使用的协议（JavaMail规范要求）</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.host&quot;</span>, SMTPSERVER); <span class="comment">// 发件人的邮箱的 SMTP 服务器地址</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.port&quot;</span>, SMTPPORT); <span class="comment">//端口</span></span><br><span class="line">        props.put(<span class="string">&quot;mail.smtp.socketFactory.class&quot;</span>, <span class="string">&quot;javax.net.ssl.SSLSocketFactory&quot;</span>);</span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.auth&quot;</span>, <span class="string">&quot;true&quot;</span>); <span class="comment">// 需要请求认证</span></span><br><span class="line">        props.setProperty(<span class="string">&quot;mail.smtp.ssl.enable&quot;</span>, <span class="string">&quot;true&quot;</span>);<span class="comment">// 开启ssl</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 根据邮件配置创建会话，注意session别导错包</span></span><br><span class="line">        Session session = Session.getDefaultInstance(props);</span><br><span class="line">        <span class="comment">//创建邮件</span></span><br><span class="line">        MimeMessage message = <span class="keyword">new</span> MimeMessage(session);;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 发件人邮件地址, 发件人别名（收件邮箱显示）, charset编码方式</span></span><br><span class="line">            InternetAddress fromAddress = <span class="keyword">new</span> InternetAddress(ACCOUT,<span class="string">&quot;小尾巴96&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置发送邮件方</span></span><br><span class="line">            message.setFrom(fromAddress);</span><br><span class="line">            <span class="comment">//收件地址  发件人别名（自己邮箱显示）</span></span><br><span class="line">            InternetAddress receiveAddress = <span class="keyword">new</span> InternetAddress(<span class="string">&quot;xxx@qq.com&quot;</span>, <span class="string">&quot;VinhoJiang&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置邮件接收方</span></span><br><span class="line">            message.setRecipient(Message.RecipientType.TO, receiveAddress);</span><br><span class="line">            <span class="comment">// 设置邮件标题</span></span><br><span class="line">            message.setSubject(<span class="string">&quot;验证码&quot;</span>, <span class="string">&quot;utf-8&quot;</span>);</span><br><span class="line">            <span class="comment">//邮件内容</span></span><br><span class="line">            <span class="comment">//msg.setText(&quot;您的验证码是4528&quot;);//普通文字</span></span><br><span class="line">            String htmlText = <span class="string">&quot;您的验证码是&lt;H2 style=&#x27;color:pink&#x27;&gt;&quot;</span>+code+<span class="string">&quot;&lt;/H2&gt;&quot;</span>;</span><br><span class="line">            <span class="comment">//以网页形式发送 UTF-8</span></span><br><span class="line">            message.setContent(htmlText, <span class="string">&quot;text/html;charset=UTF-8&quot;</span>);</span><br><span class="line">            <span class="comment">// 设置显示的发件时间</span></span><br><span class="line">            message.setSentDate(<span class="keyword">new</span> Date());</span><br><span class="line">            <span class="comment">// 保存设置</span></span><br><span class="line">            message.saveChanges();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//获取传输通道</span></span><br><span class="line">        Transport transport = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport = session.getTransport();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (NoSuchProviderException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport.connect(SMTPSERVER,ACCOUT, PWD);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//连接，并发送邮件</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            transport.sendMessage(message, message.getAllRecipients());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                transport.close();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (MessagingException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/java%20%E5%8F%91%E9%82%AE%E4%BB%B6%20javax.mail/" data-id="ckfg68eb0000s2ntydt5l2cvt" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-java使用HttpClient发送http请求" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/24/java%E4%BD%BF%E7%94%A8HttpClient%E5%8F%91%E9%80%81http%E8%AF%B7%E6%B1%82/" class="article-date">
-  <time datetime="2020-09-24T02:02:10.844Z" itemprop="datePublished">2020-09-24</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="java使用HttpClient发送http请求-java"><a href="#java使用HttpClient发送http请求-java" class="headerlink" title="java使用HttpClient发送http请求```java"></a>java使用HttpClient发送http请求```java</h2><p>package com.pp.locan.shared.utils;</p>
-<p>import com.alibaba.fastjson.JSON;<br>import org.apache.http.HttpEntity;<br>import org.apache.http.ParseException;<br>import org.apache.http.client.ClientProtocolException;<br>import org.apache.http.client.config.RequestConfig;<br>import org.apache.http.client.methods.CloseableHttpResponse;<br>import org.apache.http.client.methods.HttpGet;<br>import org.apache.http.client.methods.HttpPost;<br>import org.apache.http.entity.StringEntity;<br>import org.apache.http.impl.client.CloseableHttpClient;<br>import org.apache.http.impl.client.HttpClientBuilder;<br>import org.apache.http.util.EntityUtils;</p>
-<p>import java.io.IOException;<br>import java.util.Iterator;<br>import java.util.Map;<br>import java.util.Set;</p>
-<p>public class HttpClient {</p>
-<pre><code>/**
- * get请求带参数
- * @param map
- */
-public static String sendGetParam(Map map, String uri) &#123;
-    //设置返回对象
-    String returnJson = null;
-    // 获得Http客户端(可以理解为:你得先有一个浏览器;注意:实际上HttpClient与浏览器是不一样的)
-    CloseableHttpClient httpClient = HttpClientBuilder.create().build();
-
-    // 参数
-    StringBuffer params = new StringBuffer();
-
-    // 字符数据最好encoding以下;这样一来，某些特殊字符才能传过去(如:某人的名字就是“&amp;”,不encoding的话,传不过去)
-    Set&lt;String&gt; strings = map.keySet();
-    Iterator&lt;String&gt; iterator = strings.iterator();
-    boolean flag = false;
-    while (iterator.hasNext())&#123;
-        if (flag)&#123;
-            params.append(&quot;&amp;&quot;);
-        &#125;
-        String key = iterator.next();
-        params.append(key + &quot;=&quot; + map.get(key));
-
-        flag= true;
-    &#125;
-
-
-    // 创建Get请求
-    HttpGet httpGet = new HttpGet(uri + &quot;?&quot; + params.toString());
-    // 响应模型
-    CloseableHttpResponse response = null;
-    try &#123;
-        // 配置信息
-        RequestConfig requestConfig = RequestConfig.custom()
-                // 设置连接超时时间(单位毫秒)
-                .setConnectTimeout(5000)
-                // 设置请求超时时间(单位毫秒)
-                .setConnectionRequestTimeout(5000)
-                // socket读写超时时间(单位毫秒)
-                .setSocketTimeout(5000)
-                // 设置是否允许重定向(默认为true)
-                .setRedirectsEnabled(true).build();
-
-        // 将上面的配置信息 运用到这个Get请求里
-        httpGet.setConfig(requestConfig);
-
-        // 由客户端执行(发送)Get请求
-        response = httpClient.execute(httpGet);
-
-        // 从响应模型中获取响应实体
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) &#123;
-            returnJson = EntityUtils.toString(responseEntity);
-        &#125;
-    &#125; catch (ClientProtocolException e) &#123;
-        e.printStackTrace();
-    &#125; catch (ParseException e) &#123;
-        e.printStackTrace();
-    &#125; catch (IOException e) &#123;
-        e.printStackTrace();
-    &#125; finally &#123;
-        try &#123;
-            // 释放资源
-            if (httpClient != null) &#123;
-                httpClient.close();
-            &#125;
-            if (response != null) &#123;
-                response.close();
-            &#125;
-        &#125; catch (IOException e) &#123;
-            e.printStackTrace();
-        &#125;
-    &#125;
-    return returnJson;
-&#125;
-
-
-/**
- * 发送post请求 - json
- * @param uri 发送请求的地址
- * @param object 请求体
- * @return json字符串
- */
-public static String sendPost(String uri, Object object)&#123;
-    //设置返回对象
-    String returnJson = null;
-    // 获得Http客户端(可以理解为:你得先有一个浏览器;注意:实际上HttpClient与浏览器是不一样的)
-    CloseableHttpClient httpClient = HttpClientBuilder.create().build();
-    // 创建Post请求
-    HttpPost httpPost = new HttpPost(uri);
-
-    //将Object转换为json字符串;
-    String jsonString = JSON.toJSONString(object);
-    StringEntity entity = new StringEntity(jsonString, &quot;UTF-8&quot;);
-
-    // post请求是将参数放在请求体里面传过去的;这里将entity放入post请求体中
-    httpPost.setEntity(entity);
-    httpPost.setHeader(&quot;Content-Type&quot;, &quot;application/json;charset=utf8&quot;);
-
-    // 响应模型
-    CloseableHttpResponse response = null;
-    try &#123;
-        // 由客户端执行(发送)Post请求
-        response = httpClient.execute(httpPost);
-        // 从响应模型中获取响应实体
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) &#123;
-            returnJson = EntityUtils.toString(responseEntity);
-        &#125;
-    &#125; catch (ClientProtocolException e) &#123;
-        e.printStackTrace();
-    &#125; catch (ParseException e) &#123;
-        e.printStackTrace();
-    &#125; catch (IOException e) &#123;
-        e.printStackTrace();
-    &#125; finally &#123;
-        try &#123;
-            // 释放资源
-            if (httpClient != null) &#123;
-                httpClient.close();
-            &#125;
-            if (response != null) &#123;
-                response.close();
-            &#125;
-        &#125; catch (IOException e) &#123;
-            e.printStackTrace();
-        &#125;
-    &#125;
-    return returnJson;
-&#125;</code></pre>
-<p>}</p>
-<p>```</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/24/java%E4%BD%BF%E7%94%A8HttpClient%E5%8F%91%E9%80%81http%E8%AF%B7%E6%B1%82/" data-id="ckfg68eb1000u2ntygp332pm5" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2020/09/27/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/" data-id="ckfki6al100183bnkc7po1732" class="article-share-link">Share</a>
       
       
     </footer>
@@ -691,7 +520,7 @@ public static String sendPost(String uri, Object object)&#123;
   <div class="widget-wrap">
     <h3 class="widget-title">标签</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/javascript/" rel="tag">javascript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
     </div>
   </div>
 
@@ -701,7 +530,7 @@ public static String sendPost(String uri, Object object)&#123;
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
+      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/javascript/" style="font-size: 10px;">javascript</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
     </div>
   </div>
 
@@ -723,23 +552,23 @@ public static String sendPost(String uri, Object object)&#123;
       <ul>
         
           <li>
-            <a href="/2020/09/24/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/">(no title)</a>
+            <a href="/2020/09/27/java%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/24/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
+            <a href="/2020/09/27/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/24/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2020/09/27/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/24/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2020/09/27/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/24/Jetbrains%E7%B3%BB%E5%88%97%E4%BA%A7%E5%93%812019.3.3%E6%9C%80%E6%96%B0%E6%BF%80%E6%B4%BB%E6%96%B9%E6%B3%95/">(no title)</a>
+            <a href="/2020/09/27/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
           </li>
         
       </ul>
