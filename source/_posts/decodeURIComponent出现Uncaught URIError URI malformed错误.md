@@ -1,7 +1,7 @@
 ---
 title: decodeURIComponent出现Uncaught URIError URI malformed错误
 date: 2020.09.27 10:10
-tag:
+tags:
   - javascript
 ---
 
