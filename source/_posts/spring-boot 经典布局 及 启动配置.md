@@ -1,4 +1,11 @@
-## spring-boot 经典布局 及 启动配置## 依赖
+---
+title: spring-boot 经典布局 及 启动配置
+date: 2021-03-18 15:08:05
+tags:
+  - SpringBoot
+---
+
+## 依赖
 pom.xml
 ```xml
 

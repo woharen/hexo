@@ -1,3 +1,10 @@
+---
+title: tomcat中html乱码
+date: 2021-03-18 15:08:05
+tags:
+  - Tomcat
+---
+
 ## tomcat中html乱码问题下面的配置都在conf文件夹里面配置
 1. 在web.xml中配置
 ```xml
