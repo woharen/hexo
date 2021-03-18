@@ -64,10 +64,10 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-Redis实现Redlock分布式锁" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-Redis入门" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/Redis%E5%85%A5%E9%97%A8/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -76,15 +76,241 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="Redis实现Redlock分布式锁-依赖"><a href="#Redis实现Redlock分布式锁-依赖" class="headerlink" title="Redis实现Redlock分布式锁## 依赖"></a>Redis实现Redlock分布式锁## 依赖</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--Springboot环境下 redis分布式锁 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson-spring-boot-starter<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- Springboot环境下 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.11.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//创建连接1</span></span><br><span class="line">    RedissonClient redissonClient1 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">//创建连接2</span></span><br><span class="line">    RedissonClient redissonClient2 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">1</span>);</span><br><span class="line">    <span class="comment">//创建连接3</span></span><br><span class="line">    RedissonClient redissonClient3 = getRedissonClient(<span class="string">&quot;redis://127.0.0.1:6379&quot;</span>, <span class="number">2</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//设置锁的key</span></span><br><span class="line">    String resourceName = <span class="string">&quot;REDLOCK_KEY&quot;</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//获取锁</span></span><br><span class="line">    RLock lock1 = redissonClient1.getLock(resourceName);</span><br><span class="line">    RLock lock2 = redissonClient2.getLock(resourceName);</span><br><span class="line">    RLock lock3 = redissonClient3.getLock(resourceName);</span><br><span class="line">    <span class="comment">// 向3个redis实例尝试加锁</span></span><br><span class="line">    RedissonRedLock redLock = <span class="keyword">new</span> RedissonRedLock(lock1, lock2, lock3);</span><br><span class="line">    <span class="keyword">boolean</span> isLock;</span><br><span class="line">    </span><br><span class="line">    List&lt;MaxLimitRankingVo&gt; list = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 500ms拿不到锁, 就认为获取锁失败。10000ms即10s是锁失效时间。</span></span><br><span class="line">        isLock = redLock.tryLock(<span class="number">500</span>, <span class="number">10000</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        System.out.println(<span class="string">&quot;isLock = &quot;</span>+isLock);</span><br><span class="line">        <span class="keyword">if</span> (isLock) &#123;</span><br><span class="line">            Thread.sleep(<span class="number">8000</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">// 无论如何, 最后都要解锁</span></span><br><span class="line">        redLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取 RedissonClient</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> address 地址</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> RedissonClient <span class="title">getRedissonClient</span><span class="params">(String address, <span class="keyword">int</span> database)</span></span>&#123;</span><br><span class="line">    Config config = <span class="keyword">new</span> Config();</span><br><span class="line">    config.useSingleServer().setAddress(address).setDatabase(database);</span><br><span class="line">    <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        <h2 id="Redis入门-Redis入门"><a href="#Redis入门-Redis入门" class="headerlink" title="Redis入门# Redis入门"></a>Redis入门# Redis入门</h2><h2 id="一、介绍"><a href="#一、介绍" class="headerlink" title="一、介绍"></a>一、介绍</h2><p>redis是键值对的数据库，常用的五种数据类型为</p>
+<ul>
+<li>字符串类型（string）</li>
+<li>散列类型（hash）</li>
+<li>列表类型（list）</li>
+<li>集合类型（set）</li>
+<li>有序集合类型（zset）</li>
+</ul>
+<p>Redis用作缓存，主要两个用途：高性能，高并发，因为内存天然支持高并发</p>
+<h2 id="二、安装使用"><a href="#二、安装使用" class="headerlink" title="二、安装使用"></a>二、安装使用</h2><h3 id="1-安装-epel仓库"><a href="#1-安装-epel仓库" class="headerlink" title="1.安装 epel仓库"></a>1.安装 epel仓库</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum search epel</span><br><span class="line">yum -y install epel-release.noarch</span><br><span class="line">yum -y install redis</span><br></pre></td></tr></table></figure>
 
-<h2 id="文档参考"><a href="#文档参考" class="headerlink" title="文档参考"></a>文档参考</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/60309808">Redis分布式锁的正确实现方式</a></p>
+<h3 id="2-启动"><a href="#2-启动" class="headerlink" title="2.启动"></a>2.启动</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">service redis start</span><br><span class="line">find / -name redis</span><br></pre></td></tr></table></figure>
+<h3 id="卸载"><a href="#卸载" class="headerlink" title="卸载"></a>卸载</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">rpm -qa | grep redis</span><br><span class="line">redis-3.2.10-2.el7.x86_64</span><br><span class="line">rpm -e redis-3.2.10-2.el7.x86_64</span><br></pre></td></tr></table></figure>
+
+<h3 id="查看6379端口"><a href="#查看6379端口" class="headerlink" title="查看6379端口"></a>查看6379端口</h3><p>yum -y install net-tools<br>netstat -aon | grep 6379</p>
+<h3 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h3><p>redis-cli<br>set 键 值<br>get 键</p>
+<h3 id="修改-etc-redis-conf"><a href="#修改-etc-redis-conf" class="headerlink" title="修改 /etc/redis.conf"></a>修改 /etc/redis.conf</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bind 192.168.1.238  绑定ip 远程操作</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="redis的ui客户端"><a href="#redis的ui客户端" class="headerlink" title="redis的ui客户端"></a>redis的ui客户端</h3><p><a target="_blank" rel="noopener" href="https://github.com/cinience/RedisStudio/releases">redisstudio</a></p>
+<p>redis-desktop-manager</p>
+<h2 id="二、redis简单配置"><a href="#二、redis简单配置" class="headerlink" title="二、redis简单配置"></a>二、redis简单配置</h2><ol>
+<li><p>设置登录密码（默认没有密码登陆）</p>
+<ul>
+<li><p>redis 设置登陆的密码</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">requirepass 123456</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启redis</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service redis restart</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>连接redis 后 </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">auth 密码 </span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>设置数据库个数</p>
+<ul>
+<li><p>redis所有键值对数据都创建在数据库中  数据库没有名字  只有索引 默认数据 0号数据</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select 数据库下标（从0开始）</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果需要添加数据库的个数 修改 /etc/redis.conf </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">databases 具体数据库个数</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="三、使用"><a href="#三、使用" class="headerlink" title="三、使用"></a>三、使用</h2><h3 id="1-redis-keys相关命令"><a href="#1-redis-keys相关命令" class="headerlink" title="1. redis keys相关命令"></a>1. redis keys相关命令</h3><p>redis存储的是键值对  对键进行操作的命令</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">//获取key对应的值</span><br><span class="line">get key</span><br><span class="line">//删除key对应的值</span><br><span class="line"><span class="built_in">del</span> key</span><br><span class="line">//判断数据库中是否存在该key对应的数据</span><br><span class="line">exists key</span><br><span class="line">//超时时间 给key设置超时时间 单位是s</span><br><span class="line">expire key</span><br><span class="line">//列表显示所有的键  可以模糊匹配 比如 keys user_* 匹配user_开头所有</span><br><span class="line">keys *</span><br><span class="line">//获取某个键对应的值的类型（默认是string类型）</span><br><span class="line"><span class="built_in">TYPE</span> key</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-redis所有数据类型（值的类型）"><a href="#2-redis所有数据类型（值的类型）" class="headerlink" title="2. redis所有数据类型（值的类型）"></a>2. redis所有数据类型（值的类型）</h3><h4 id="字符串"><a href="#字符串" class="headerlink" title="字符串"></a>字符串</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">//将 key 中储存的数字值增一。</span><br><span class="line"><span class="built_in">SET</span> key value</span><br><span class="line">//获取指定 key 的值。</span><br><span class="line">GET key</span><br><span class="line">//返回 key 所储存的字符串值的长度。</span><br><span class="line">STRLEN key</span><br><span class="line">//将 key 中储存的数字值增一。</span><br><span class="line">INCR key</span><br><span class="line">//如果 key 已经存在并且是一个字符串， APPEND 命令将指定的 value 追加到该 key 原来值（value）的末尾。</span><br><span class="line">APPEND key value</span><br></pre></td></tr></table></figure>
+
+<h4 id="hash（对象-多个属性）"><a href="#hash（对象-多个属性）" class="headerlink" title="hash（对象 多个属性）"></a>hash（对象 多个属性）</h4><blockquote>
+<p>class User{<br>    String id=1;<br>    String name=”zs”;<br>}</p>
+</blockquote>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">//同时将多个 field<span class="literal">-value</span> (域-值)对设置到哈希表 key 中。</span><br><span class="line">HMSET key field1 value1 [<span class="type">field2</span> <span class="type">value2</span> ] </span><br><span class="line">//获取所有哈希表中的字段</span><br><span class="line">HKEYS key</span><br><span class="line">//获取在哈希表中指定 key 的所有字段和值</span><br><span class="line">HGETALL key </span><br><span class="line">//获取存储在哈希表中指定字段的值</span><br><span class="line">HGET key field </span><br><span class="line">//删除一个或多个哈希表字段</span><br><span class="line">HDEL key field1 [<span class="type">field2</span>] </span><br><span class="line">//查看哈希表 key 中，指定的字段是否存在。</span><br><span class="line">HEXISTS key field </span><br></pre></td></tr></table></figure>
+<h4 id="列表（list-数组-队列-栈）"><a href="#列表（list-数组-队列-栈）" class="headerlink" title="列表（list 数组 队列 栈）"></a>列表（list 数组 队列 栈）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">//将一个或多个值插入到列表头部</span><br><span class="line">LPUSH key value1 [<span class="type">value2</span>]</span><br><span class="line">//在列表中添加一个或多个值</span><br><span class="line">RPUSH key value1 [<span class="type">value2</span>]</span><br><span class="line">//获取列表长度</span><br><span class="line">LLEN key</span><br><span class="line">//通过索引获取列表中的元素</span><br><span class="line">LINDEX key index</span><br><span class="line">//移除列表元素</span><br><span class="line">LREM key count value</span><br><span class="line">//从头往尾移除值为 value 的元素。</span><br><span class="line">count &gt; <span class="number">0</span>:</span><br><span class="line">//从尾往头移除值为 value 的元素。</span><br><span class="line">count &lt; <span class="number">0</span>:</span><br><span class="line">//移除所有值为 value 的元素。</span><br><span class="line">count = <span class="number">0</span>:</span><br><span class="line">//获取列表指定范围内的元素</span><br><span class="line">LRANGE key <span class="built_in">start</span> stop</span><br></pre></td></tr></table></figure>
+
+<h4 id="set（无重复元素集合）"><a href="#set（无重复元素集合）" class="headerlink" title="set（无重复元素集合）"></a>set（无重复元素集合）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">//向集合添加一个或多个成员</span><br><span class="line">SADD key member1 [<span class="type">member2</span>]</span><br><span class="line">// 获取集合的成员数</span><br><span class="line">SCARD key</span><br><span class="line">//判断 member 元素是否是集合 key 的成员</span><br><span class="line">SISMEMBER key member</span><br><span class="line">//获取所有成员</span><br><span class="line">SMEMBERS key</span><br><span class="line">//移除集合中一个或多个成员</span><br><span class="line">SREM key member1 [<span class="type">member2</span>]</span><br></pre></td></tr></table></figure>
+
+<h4 id="zset（排序集合）"><a href="#zset（排序集合）" class="headerlink" title="zset（排序集合）"></a>zset（排序集合）</h4><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">//向有序集合添加一个或多个成员，或者更新已存在成员的分数</span><br><span class="line">ZADD key score1 member1 [<span class="type">score2</span> <span class="type">member2</span>]</span><br><span class="line">//获取有序集合的成员数</span><br><span class="line">ZCARD key</span><br><span class="line">//通过索引区间返回有序集合成指定区间内的成员</span><br><span class="line">ZRANGE key <span class="built_in">start</span> stop [<span class="type">WITHSCORES</span>]</span><br><span class="line">//返回有序集中指定区间内的成员，通过索引，分数从高到底</span><br><span class="line">ZREVRANGE key <span class="built_in">start</span> stop [<span class="type">WITHSCORES</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+
+<h2 id="四、应用场景"><a href="#四、应用场景" class="headerlink" title="四、应用场景"></a>四、应用场景</h2><h3 id="分布式锁（string）"><a href="#分布式锁（string）" class="headerlink" title="分布式锁（string）"></a>分布式锁（string）</h3><p>setnx key value()，当key不存在时，将 key 的值设为 value ，返回1。若给定的 key 已经存在，则setnx不做任何动作，返回0。<br>当setnx返回1时，表示获取锁，做完操作以后del key，表示释放锁，如果setnx返回0表示获取锁失败.</p>
+<blockquote>
+<p>SETNX key value<br>只在键 key 不存在的情况下， 将键 key 的值设置为 value 。<br>若键 key 已经存在， 则 SETNX 命令不做任何动作。</p>
+</blockquote>
+<h3 id="计数器（string）"><a href="#计数器（string）" class="headerlink" title="计数器（string）"></a>计数器（string）</h3><p>如知乎每个问题的被浏览器次数</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">set</span> key <span class="number">0</span></span><br><span class="line">// incr readcount::&#123;帖子id&#125; 每阅读一次</span><br><span class="line">incr key</span><br><span class="line">// get readcount::&#123;帖子id&#125; 获取阅读量</span><br><span class="line">get key</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>incr<br>为键 key 储存的数字值加上一。<br>如果键 key 不存在， 那么它的值会先被初始化为 0 ， 然后再执行 INCR 命令。<br>如果键 key 储存的值不能被解释为数字， 那么 INCR 命令将返回一个错误。<br>本操作的值限制在 64 位(bit)有符号数字表示之内。</p>
+</blockquote>
+<h3 id="消息队列（list）"><a href="#消息队列（list）" class="headerlink" title="消息队列（list）"></a>消息队列（list）</h3><p>在list里面一边进，一边出即可</p>
+<p><strong>实现方式一</strong></p>
+<ol>
+<li><p>一直往list左边放</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lpush key value </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>key这个list有元素时，直接弹出，没有元素被阻塞，直到等待超时或发现可弹出元素为止，上面例子超时时间为10s</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brpop key value 10 </span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p><strong>实现方式二</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rpush key value</span><br><span class="line">blpop key value 10</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="抽奖活动（set）"><a href="#抽奖活动（set）" class="headerlink" title="抽奖活动（set）"></a>抽奖活动（set）</h3><ol>
+<li><p>参加抽奖活动</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sadd key &#123;userId&#125; </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取所有抽奖用户，大轮盘转起来</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">smembers key </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>抽取count名中奖者，并从抽奖活动中移除</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">spop key count </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>抽取count名中奖者，不从抽奖活动中移除</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">srandmember key count</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>实现点赞，签到，like等功能(set)</p>
+</blockquote>
+</li>
+</ol>
+<h3 id="电商商品筛选（set）"><a href="#电商商品筛选（set）" class="headerlink" title="电商商品筛选（set）"></a>电商商品筛选（set）</h3><p>每个商品入库的时候即会建立他的静态标签列表如，品牌，尺寸，处理器，内存</p>
+<ol>
+<li><p>将拯救者y700P-001和ThinkPad-T480这两个元素放到集合brand::lenovo</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sadd brand::lenovo 拯救者y700P-001 ThinkPad-T480</span><br><span class="line">sadd screenSize::15.6 拯救者y700P-001 机械革命Z2AIR</span><br><span class="line">sadd processor::i7 拯救者y700P-001 机械革命X8TIPlus</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取品牌为联想，屏幕尺寸为15.6，并且处理器为i7的电脑品牌(sinter为获取集合的交集)</p>
+ <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sinter brand::lenovo screenSize::15.6 processor::i7 -&gt; 拯救者y700P-001</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h3 id="排行版（zset）"><a href="#排行版（zset）" class="headerlink" title="排行版（zset）"></a>排行版（zset）</h3><p>redis的zset天生是用来做排行榜的、好友列表, 去重, 历史记录等业务需求</p>
+<ol>
+<li><p>user1的用户分数为 10</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">zadd ranking 10 user1</span><br><span class="line">zadd ranking 20 user2</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>取分数最高的3个用户</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">zrevrange ranking 0 2 withscores</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h2 id="五、过期策略"><a href="#五、过期策略" class="headerlink" title="五、过期策略"></a>五、过期策略</h2><p>redis 会将每个设置了过期时间的 key 放入到一个独立的字典中，以后会定期遍历这个字典来删除到期的 key。</p>
+<ul>
+<li><p><strong>定期删除策略</strong></p>
+<p>Redis 默认会每秒进行十次过期扫描（100ms一次），过期扫描不会遍历过期字典中所有的 key，而是采用了一种简单的贪心策略。<br>从过期字典中随机 20 个 key；<br>删除这 20 个 key 中已经过期的 key；<br>如果过期的 key 比率超过 1/4，那就重复步骤 1；</p>
+</li>
+<li><p><strong>惰性删除</strong></p>
+<p>除了定期遍历之外，它还会使用惰性策略来删除过期的 key，所谓惰性策略就是在客户端访问这个 key 的时候，redis 对 key 的过期时间进行检查，如果过期了就立即删除，不会给你返回任何东西。</p>
+</li>
+</ul>
+<blockquote>
+<p>定期删除是集中处理，惰性删除是零散处理。</p>
+</blockquote>
+<h3 id="为什么要采用定期删除-惰性删除2种策略呢？"><a href="#为什么要采用定期删除-惰性删除2种策略呢？" class="headerlink" title="为什么要采用定期删除+惰性删除2种策略呢？"></a>为什么要采用定期删除+惰性删除2种策略呢？</h3><p>如果过期就删除。假设redis里放了10万个key，都设置了过期时间，你每隔几百毫秒，就检查10万个key，那redis基本上就死了，cpu负载会很高的，消耗在你的检查过期key上了<br>但是问题是，定期删除可能会导致很多过期key到了时间并没有被删除掉，那咋整呢？所以就是惰性删除了。这就是说，在你获取某个key的时候，redis会检查一下 ，这个key如果设置了过期时间那么是否过期了？如果过期了此时就会删除，不会给你返回任何东西。<br>并不是key到时间就被删除掉，而是你查询这个key的时候，redis再懒惰的检查一下<br>通过上述两种手段结合起来，保证过期的key一定会被干掉。<br>所以说用了上述2种策略后，下面这种现象就不难解释了：<strong>数据明明都过期了，但是还占有着内存</strong></p>
+<h2 id="六、内存淘汰策略"><a href="#六、内存淘汰策略" class="headerlink" title="六、内存淘汰策略"></a>六、内存淘汰策略</h2><p>因为Redis将数据放到内存中，内存是有限的，比如redis就只能用10个G，你要是往里面写了20个G的数据，会咋办？当然会干掉10个G的数据，然后就保留10个G的数据了。那干掉哪些数据？保留哪些数据？当然是干掉不常用的数据，保留常用的数据了<br>Redis提供的内存淘汰策略有如下几种：</p>
+<ol>
+<li><p><strong>noeviction</strong> </p>
+<p>不会继续服务写请求 (DEL 请求可以继续服务)，读请求可以继续进行。这样可以保证不会丢失数据，但是会让线上的业务不能持续进行。这是默认的淘汰策略。</p>
+</li>
+<li><p><strong>volatile-lru</strong></p>
+<p>尝试淘汰设置了过期时间的 key，最少使用的 key 优先被淘汰。没有设置过期时间的 key 不会被淘汰，这样可以保证需要持久化的数据不会突然丢失。（这个是使用最多的）</p>
+</li>
+<li><p><strong>volatile-ttl</strong></p>
+<p>跟上面一样，除了淘汰的策略不是 LRU，而是 key 的剩余寿命 ttl 的值，ttl 越小越优先被淘汰。</p>
+</li>
+<li><p><strong>volatile-random</strong></p>
+<p>跟上面一样，不过淘汰的 key 是过期 key 集合中随机的 key。</p>
+</li>
+<li><p><strong>allkeys-lru</strong></p>
+<p>区别于 volatile-lru，这个策略要淘汰的 key 对象是全体的 key 集合，而不只是过期的 key 集合。这意味着没有设置过期时间的 key 也会被淘汰。v</p>
+</li>
+<li><p><strong>allkeys-random</strong></p>
+<p>跟上面一样，不过淘汰的策略是随机的 key。allkeys-random 跟上面一样，不过淘汰的策略是随机的 key。</p>
+</li>
+</ol>
+<h2 id="七、持久化策略"><a href="#七、持久化策略" class="headerlink" title="七、持久化策略"></a>七、持久化策略</h2><p>Redis的数据是存在内存中的，如果Redis发生宕机，那么数据会全部丢失，因此必须提供持久化机制。<br>Redis 的持久化机制有两种</p>
+<ul>
+<li><p><strong>快照（RDB）</strong></p>
+<p>快照是一次全量备份，AOF 日志是连续的增量备份。快照是内存数据的二进制序列化形式，在存储上非常紧凑，</p>
+</li>
+<li><p><strong>AOF 日志</strong></p>
+<p>而 AOF 日志记录的是内存数据修改的指令记录文本。AOF 日志在长期的运行过程中会变的无比庞大，数据库重启时需要加载 AOF 日志进行指令重放，这个时间就会无比漫长。所以需要定期进行 AOF 重写，给 AOF 日志进行瘦身。<br>RDB是通过Redis主进程fork子进程，让子进程执行磁盘 IO 操作来进行 RDB 持久化，AOF 日志存储的是 Redis 服务器的顺序指令序列，AOF 日志只记录对内存进行修改的指令记录。</p>
+</li>
+</ul>
+<blockquote>
+<p>即RDB记录的是数据，AOF记录的是指令</p>
+</blockquote>
+<h3 id="RDB和AOF到底该如何选择？"><a href="#RDB和AOF到底该如何选择？" class="headerlink" title="RDB和AOF到底该如何选择？"></a><strong>RDB和AOF到底该如何选择？</strong></h3><ol>
+<li>不要仅仅使用 RDB，因为那样会导致你丢失很多数据，因为RDB是隔一段时间来备份数据</li>
+<li>也不要仅仅使用 AOF，因为那样有两个问题，第一，通过 AOF 做冷备没有RDB恢复速度快; 第二，RDB 每次简单粗暴生成数据快照，更加健壮，可以避免 AOF 这种复杂的备份和恢复机制的 bug</li>
+<li>用RDB恢复内存状态会丢失很多数据，重放AOP日志又很慢。Redis4.0推出了混合持久化来解决这个问题。将 rdb 文件的内容和增量的 AOF 日志文件存在一起。这里的 AOF 日志不再是全量的日志，而是自持久化开始到持久化结束的这段时间发生的增量 AOF 日志，通常这部分 AOF 日志很小。于是在 Redis 重启的时候，可以先加载 rdb 的内容，然后再重放增量 AOF 日志就可以完全替代之前的 AOF 全量文件重放，重启效率因此大幅得到提升。</li>
+</ol>
+<h2 id="面试题"><a href="#面试题" class="headerlink" title="面试题"></a>面试题</h2><h3 id="1-缓存雪崩和缓存穿透"><a href="#1-缓存雪崩和缓存穿透" class="headerlink" title="1. 缓存雪崩和缓存穿透"></a>1. 缓存雪崩和缓存穿透</h3><h4 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h4><p>假设有如下一个系统，高峰期请求为5000次/秒，4000次走了缓存，只有1000次落到了数据库上，数据库每秒1000的并发是一个正常的指标，完全可以正常工作，但如果缓存宕机了，每秒5000次的请求会全部落到数据库上，数据库立马就死掉了，因为数据库一秒最多抗2000个请求，如果DBA重启数据库，立马又会被新的请求打死了，这就是缓存雪崩。</p>
+<p><strong>如何解决缓存雪崩</strong></p>
+<ul>
+<li>事前：redis高可用，主从+哨兵，redis cluster，避免全盘崩溃</li>
+<li>事中：本地ehcache缓存 + hystrix限流&amp;降级，避免MySQL被打死</li>
+<li>事后：redis持久化，快速恢复缓存数据</li>
+</ul>
+<h4 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h4><p>假如客户端每秒发送5000个请求，其中4000个为黑客的恶意攻击，即在数据库中也查不到。举个例子，用户id为正数，黑客构造的用户id为负数，<br>如果黑客每秒一直发送这4000个请求，缓存就不起作用，数据库也很快被打死。</p>
+<p><strong>如何解决缓存穿透</strong><br>查询不到的数据也放到缓存，value为空，如set -999 “”<br>总而言之，缓存雪崩就是缓存失效，请求全部全部打到数据库，数据库瞬间被打死。缓存穿透就是查询了一个一定不存在的数据，并且从存储层查不到的数据没有写入缓存，这将导致这个不存在的数据每次请求都要到存储层去查询，失去了缓存的意义</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/76496852">Redis不只是缓存，还有n多种你没发现的妙用</a></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/deaidai/article/details/89061998">理解Redis缓存「穿透」「雪崩」「击穿」以及解决方案和分析</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/61884327">关于Redis，学会这8点就够了</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/67937182">Redis 如何保持和 MySQL 数据一致</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/Redis%E5%AE%9E%E7%8E%B0Redlock%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" data-id="ckfkjw9jt000g1wu3aihb8dv7" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/Redis%E5%85%A5%E9%97%A8/" data-id="ckmek4e66000i2kuw3zondmsh" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-vue在触发事件时附加自定义参数" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2021/03/18/vue%E5%9C%A8%E8%A7%A6%E5%8F%91%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%99%84%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%82%E6%95%B0/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="vue在触发事件时附加自定义参数以ElementUI的分页组件为例，"><a href="#vue在触发事件时附加自定义参数以ElementUI的分页组件为例，" class="headerlink" title="vue在触发事件时附加自定义参数以ElementUI的分页组件为例，"></a>vue在触发事件时附加自定义参数以<code>ElementUI</code>的分页组件为例，</h2><p>我们找个事件<br>比如</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-pagination</span><br><span class="line">  small</span><br><span class="line">  layout&#x3D;&quot;prev, pager, next&quot;</span><br><span class="line">  :current-change&#x3D;&#39;changePage&#39;</span><br><span class="line">  :total&#x3D;&quot;50&quot;&gt;</span><br><span class="line">&lt;&#x2F;el-pagination&gt;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * currentPage 改变时会触发</span><br><span class="line"> * @param index 当前页</span><br><span class="line"> *&#x2F;</span><br><span class="line">changePage(index)&#123;</span><br><span class="line">    console.log(index);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如上述代码，我们触发分页的事件后，changePage方法只能接受到一个index参数，如果我们修改成以下写法就会报错。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">:current-change&#x3D;&#39;changePage(index, id)&#39;</span><br></pre></td></tr></table></figure>
+<h3 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h3><p>使用ES写法解决</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">:current-change&#x3D;&#39;(index) &#x3D;&gt; &#123;changePage(index, id)&#125;&#39;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">changePage(index, id)&#123;</span><br><span class="line">   console.log(index);</span><br><span class="line">   console.log(id);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://meihao1104.com/2021/03/18/vue%E5%9C%A8%E8%A7%A6%E5%8F%91%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%99%84%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%82%E6%95%B0/" data-id="ckmek4e6v001d2kuwgv2i1mom" class="article-share-link">Share</a>
       
       
     </footer>
@@ -96,8 +322,8 @@
   
     <article id="post-VUE.JS 组件component" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/VUE.JS%20%E7%BB%84%E4%BB%B6component/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -170,7 +396,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckfkjw9ju000h1wu302pp5gt6" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/VUE.JS%20%E7%BB%84%E4%BB%B6component/" data-id="ckmek4e68000k2kuw59as13mu" class="article-share-link">Share</a>
       
       
     </footer>
@@ -182,8 +408,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-VUE修改数据后不自动渲染" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -208,7 +434,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckfkjw9jv000j1wu3hds9hyrb" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/VUE%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE%E5%90%8E%E4%B8%8D%E8%87%AA%E5%8A%A8%E6%B8%B2%E6%9F%93/" data-id="ckmek4e69000m2kuw77nkh0no" class="article-share-link">Share</a>
       
       
     </footer>
@@ -220,8 +446,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-Vue父子组件互调方法" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -240,7 +466,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckfkjw9jv000k1wu30vaz0cy6" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/Vue%E7%88%B6%E5%AD%90%E7%BB%84%E4%BB%B6%E4%BA%92%E8%B0%83%E6%96%B9%E6%B3%95/" data-id="ckmek4e6a000n2kuw4uz8dscf" class="article-share-link">Share</a>
       
       
     </footer>
@@ -250,10 +476,10 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
 
 
   
-    <article id="post-vue配合ElementUI导入导出excel表格" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-vue使用xlsx-populate读写Excel表格" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -262,20 +488,14 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"><a href="#vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件" class="headerlink" title="vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件"></a>vue配合ElementUI导入导出excel表格本文主要使用elementUI上传文件</h2><h1 id="导入"><a href="#导入" class="headerlink" title="导入"></a>导入</h1><h2 id="1-导入依赖"><a href="#1-导入依赖" class="headerlink" title="1. 导入依赖"></a>1. 导入依赖</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm install -S file-saver xlsx</span><br><span class="line">npm install -D script-loader</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>import XLSX from ‘xlsx’</p>
-</blockquote>
-<h2 id="2-ElementUI上传文件代码"><a href="#2-ElementUI上传文件代码" class="headerlink" title="2.ElementUI上传文件代码"></a>2.ElementUI上传文件代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-upload</span><br><span class="line">        class&#x3D;&quot;upload-demo&quot;</span><br><span class="line">        :action&#x3D;&quot;&#39;service&#x2F;plugins&#x2F;policies&#x2F;importExcel&#x2F;&#39; + plugin&quot;</span><br><span class="line">        :on-change&#x3D;&quot;upLoad&quot;</span><br><span class="line">        :limit&#x3D;&quot;1&quot;</span><br><span class="line">        accept&#x3D;&quot;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet,application&#x2F;vnd.ms-excel&quot;</span><br><span class="line">        :auto-upload&#x3D;&quot;false&quot;</span><br><span class="line">        :file-list&#x3D;&quot;config.data&quot;&gt;</span><br><span class="line">    &lt;el-button size&#x3D;&quot;small&quot; type&#x3D;&quot;primary&quot;&gt;选择文件&lt;&#x2F;el-button&gt;</span><br><span class="line">    &lt;div slot&#x3D;&quot;tip&quot; class&#x3D;&quot;el-upload__tip&quot;&gt;只能上传xls&#x2F;xlsx文件&lt;&#x2F;div&gt;</span><br><span class="line">&lt;&#x2F;el-upload&gt;</span><br></pre></td></tr></table></figure>
-<h2 id="3-js代码"><a href="#3-js代码" class="headerlink" title="3.js代码"></a>3.js代码</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">upLoad(file, fileList) &#123;</span><br><span class="line">    let fileTemp &#x3D; file.raw;</span><br><span class="line">    if (fileTemp) &#123;</span><br><span class="line">        if ((fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.openxmlformats-officedocument.spreadsheetml.sheet&#39;)</span><br><span class="line">            || (fileTemp.type &#x3D;&#x3D;&#x3D; &#39;application&#x2F;vnd.ms-excel&#39;)) &#123;</span><br><span class="line">            this.readExcelFile(fileTemp);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            this.$message(&#123;</span><br><span class="line">                type: &#39;warning&#39;,</span><br><span class="line">                message: &#39;附件格式错误，请删除后重新上传！&#39;</span><br><span class="line">            &#125;)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        this.$message(&#123;</span><br><span class="line">            type: &#39;warning&#39;,</span><br><span class="line">            message: &#39;请上传附件！&#39;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;,</span><br><span class="line">&#x2F;&#x2F; 主要方法</span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    &#x2F;&#x2F; 通过DOM取文件数据</span><br><span class="line">    var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">    var reader &#x3D; new FileReader();</span><br><span class="line">    FileReader.prototype.readAsBinaryString &#x3D; function (file) &#123;</span><br><span class="line">        var binary &#x3D; &quot;&quot;;</span><br><span class="line">        var rABS &#x3D; false; &#x2F;&#x2F;是否将文件读取为二进制字符串</span><br><span class="line">        var workbook; &#x2F;&#x2F;读取完成的数据</span><br><span class="line">        var outdata;</span><br><span class="line">        var reader &#x3D; new FileReader();</span><br><span class="line">        reader.onload &#x3D; function (e) &#123;</span><br><span class="line">            var bytes &#x3D; new Uint8Array(reader.result);</span><br><span class="line">            var length &#x3D; bytes.byteLength;</span><br><span class="line">            for (var i &#x3D; 0; i &lt; length; i++) &#123;</span><br><span class="line">                binary +&#x3D; String.fromCharCode(bytes[i]);</span><br><span class="line">            &#125;</span><br><span class="line">            var XLSX &#x3D; require(&#39;xlsx&#39;);</span><br><span class="line">            if (rABS) &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(btoa(fixdata(binary)), &#123; &#x2F;&#x2F;手动转化</span><br><span class="line">                    type: &#39;base64&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                workbook &#x3D; XLSX.read(binary, &#123;</span><br><span class="line">                    type: &#39;binary&#39;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125;</span><br><span class="line">            outdata &#x3D; XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);</span><br><span class="line"></span><br><span class="line">            window.console.log(&quot;表格参数:&quot; + workbook);</span><br><span class="line">            window.console.log(&quot;数据:&quot; + outdata);</span><br><span class="line">        &#125;;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    if (rABS) &#123;</span><br><span class="line">        reader.readAsArrayBuffer(file);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        reader.readAsBinaryString(file);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+        <h2 id="vue使用xlsx-populate读写Excel表格-依赖"><a href="#vue使用xlsx-populate读写Excel表格-依赖" class="headerlink" title="vue使用xlsx-populate读写Excel表格## 依赖"></a>vue使用xlsx-populate读写Excel表格## 依赖</h2><p><a target="_blank" rel="noopener" href="https://www.npmjs.com/package/xlsx-populate">https://www.npmjs.com/package/xlsx-populate</a></p>
+<h2 id="读取文件"><a href="#读取文件" class="headerlink" title="读取文件"></a>读取文件</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 读取表格数据</span></span><br><span class="line">readExcelFile(file) &#123;</span><br><span class="line">    let _this = <span class="keyword">this</span>;</span><br><span class="line">    <span class="keyword">this</span>.tableData = [];</span><br><span class="line">    <span class="keyword">this</span>.isCheck = <span class="keyword">true</span>;</span><br><span class="line">    XlsxPopulate.fromDataAsync(file).then(workbook =&gt; &#123;</span><br><span class="line">        let values = workbook.sheet(<span class="number">0</span>).usedRange().value();</span><br><span class="line">        window.console.log(values);</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(err =&gt; &#123;</span><br><span class="line">        window.console.error(err);</span><br><span class="line">        _this.$message.error(<span class="string">&quot;读取文件错误&quot;</span>);</span><br><span class="line">        <span class="comment">// 设置表格加载状态</span></span><br><span class="line">        _this.tableLoading = <span class="keyword">false</span>;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h1 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zfz5720/article/details/90676359">vue使用xlsx修改样式导出excel</a></p>
-<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000018993619?utm_source=tag-newest">Vue+Element前端导入导出Excel</a></p>
-
+<h2 id="导出"><a href="#导出" class="headerlink" title="导出"></a>导出</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 导出</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> data 导出数据</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fileName 文件名</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> type 后缀名</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">exportAccesses(data, fileName, type)&#123;</span><br><span class="line">    <span class="comment">// 1.设计表头</span></span><br><span class="line">    let row1 = [<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxx&quot;</span>,<span class="string">&quot;xxxx&quot;</span>]</span><br><span class="line">    data.unshift(row1);</span><br><span class="line">    let workbook = XlsxPopulate.fromBlankAsync().then(workbook =&gt; &#123;</span><br><span class="line">        <span class="comment">//获取第一个工作表</span></span><br><span class="line">        <span class="keyword">var</span> sheet = workbook.sheet(<span class="number">0</span>);</span><br><span class="line">        <span class="comment">//设置值</span></span><br><span class="line">        sheet.cell(<span class="string">&quot;A1&quot;</span>).value(data).style(&#123;</span><br><span class="line">            border: <span class="keyword">true</span></span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="comment">//设置单元格合并</span></span><br><span class="line">        sheet.range(<span class="string">&quot;A1:E1&quot;</span>).merged(<span class="keyword">true</span>)</span><br><span class="line">        <span class="comment">//设置表头填充样式</span></span><br><span class="line">        <span class="keyword">for</span> (let i = <span class="number">1</span>; i &lt;= <span class="number">2</span>; i++) &#123;</span><br><span class="line">            let cells = sheet.row(i)._cells;</span><br><span class="line">            <span class="keyword">for</span> (let j = <span class="number">1</span>; j &lt; cells.length; j++) &#123;</span><br><span class="line">                cells[j].style(<span class="string">&quot;fill&quot;</span>, <span class="string">&quot;ddebf7&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//导出</span></span><br><span class="line">        <span class="keyword">return</span> workbook.outputAsync().then(blob =&gt; &#123;</span><br><span class="line">            type = undefined === type ? <span class="string">&quot;xlsx&quot;</span> : type;</span><br><span class="line">            <span class="keyword">this</span>.$fileUtils.saveFile(blob, fileName + <span class="string">&quot;.&quot;</span> + type);</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;).<span class="keyword">catch</span>(function (err) &#123;</span><br><span class="line">        window.console.log(err.message || err);</span><br><span class="line">        <span class="keyword">throw</span> err;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/" data-id="ckfkjw9ki00191wu39azl02gx" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/vue%E4%BD%BF%E7%94%A8xlsx-populate%E8%AF%BB%E5%86%99Excel%E8%A1%A8%E6%A0%BC/" data-id="ckmek4e6u001c2kuw12jb48jt" class="article-share-link">Share</a>
       
       
     </footer>
@@ -287,8 +507,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-git 和 svn 的区别" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -345,7 +565,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckfkjw9jx000n1wu3eagc7x7v" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/git%20%E5%92%8C%20svn%20%E7%9A%84%E5%8C%BA%E5%88%AB/" data-id="ckmek4e6c000r2kuwdxw17qll" class="article-share-link">Share</a>
       
       
     </footer>
@@ -357,8 +577,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-git和svn提交时怎么忽略文件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -384,7 +604,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckfkjw9jy000q1wu340mkfph8" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/git%E5%92%8Csvn%E6%8F%90%E4%BA%A4%E6%97%B6%E6%80%8E%E4%B9%88%E5%BF%BD%E7%95%A5%E6%96%87%E4%BB%B6/" data-id="ckmek4e6d000u2kuw6ldkaoby" class="article-share-link">Share</a>
       
       
     </footer>
@@ -396,8 +616,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-idea 下 springboot 热部署" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -417,7 +637,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckfkjw9jz000r1wu3f7vcd8l4" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/idea%20%E4%B8%8B%20springboot%20%E7%83%AD%E9%83%A8%E7%BD%B2/" data-id="ckmek4e6d000w2kuwe0kl43wq" class="article-share-link">Share</a>
       
       
     </footer>
@@ -429,8 +649,8 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
     <article id="post-idea自用插件" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2020/09/27/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
+    <a href="/2021/03/18/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" class="article-date">
+  <time datetime="2021-03-18T07:33:24.700Z" itemprop="datePublished">2021-03-18</time>
 </a>
     
   </div>
@@ -459,40 +679,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckfkjw9k0000s1wu3gztyhcby" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-vue读取json文件和下载文件" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2020/09/27/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/" class="article-date">
-  <time datetime="2020-09-27T03:35:44.460Z" itemprop="datePublished">2020-09-27</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="vue读取json文件和下载文件-读取json文件"><a href="#vue读取json文件和下载文件-读取json文件" class="headerlink" title="vue读取json文件和下载文件## 读取json文件"></a>vue读取json文件和下载文件## 读取json文件</h2><ol>
-<li>获取file文件<br> 具体步骤不说了，input上传文件或者elementUI上传文件都可以，只要拿到file对象就可以了</li>
-<li>读取内容<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">let file &#x3D; &quot;获取file文件对象&quot;;</span><br><span class="line">let reader &#x3D; new FileReader();</span><br><span class="line">reader.readAsText(file, &quot;UTF-8&quot;);</span><br><span class="line">reader.onload &#x3D; function (e) &#123;</span><br><span class="line">    let data &#x3D; JSON.parse(e.target.result);</span><br><span class="line">    &#x2F;&#x2F; 打印json数据</span><br><span class="line">    window.console.log(data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h2 id="下载文件"><a href="#下载文件" class="headerlink" title="下载文件"></a>下载文件</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">let services &#x3D; &#123;&quot;key&quot;: &quot;value&quot;&#125;;</span><br><span class="line">let data &#x3D; JSON.stringify(services);</span><br><span class="line">let blob &#x3D; new Blob([data], &#123;type: &#39;text&#x2F;plain;charset&#x3D;utf-8&#39;&#125;);</span><br><span class="line">&#x2F;&#x2F; json或者txt都可以</span><br><span class="line">let fileName &#x3D; &#39;文件名.json&#39;;</span><br><span class="line">FileSaver.saveAs(blob, fileName);</span><br></pre></td></tr></table></figure>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://meihao1104.com/2020/09/27/vue%E8%AF%BB%E5%8F%96json%E6%96%87%E4%BB%B6%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6/" data-id="ckfkjw9kh00181wu3gr0w8r2c" class="article-share-link">Share</a>
+      <a data-url="https://meihao1104.com/2021/03/18/idea%E8%87%AA%E7%94%A8%E6%8F%92%E4%BB%B6/" data-id="ckmek4e6e000x2kuwan8e5cx9" class="article-share-link">Share</a>
       
       
     </footer>
@@ -520,7 +707,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   <div class="widget-wrap">
     <h3 class="widget-title">标签</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/javascript/" rel="tag">javascript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/JavaScript/" rel="tag">JavaScript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jrebel/" rel="tag">Jrebel</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Maven/" rel="tag">Maven</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Redis/" rel="tag">Redis</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SpringBoot/" rel="tag">SpringBoot</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Tomcat/" rel="tag">Tomcat</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/java/" rel="tag">java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/javascript/" rel="tag">javascript</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/js/" rel="tag">js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/" rel="tag">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svn/" rel="tag">svn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/vue/" rel="tag">vue</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windowns/" rel="tag">windowns</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/windows/" rel="tag">windows</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" rel="tag">错误记录</a></li></ul>
     </div>
   </div>
 
@@ -530,7 +717,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   <div class="widget-wrap">
     <h3 class="widget-title">标签云</h3>
     <div class="widget tagcloud">
-      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/javascript/" style="font-size: 10px;">javascript</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
+      <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Jrebel/" style="font-size: 10px;">Jrebel</a> <a href="/tags/Maven/" style="font-size: 10px;">Maven</a> <a href="/tags/Redis/" style="font-size: 10px;">Redis</a> <a href="/tags/SpringBoot/" style="font-size: 10px;">SpringBoot</a> <a href="/tags/Tomcat/" style="font-size: 10px;">Tomcat</a> <a href="/tags/java/" style="font-size: 20px;">java</a> <a href="/tags/javascript/" style="font-size: 10px;">javascript</a> <a href="/tags/js/" style="font-size: 10px;">js</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/svn/" style="font-size: 15px;">svn</a> <a href="/tags/vue/" style="font-size: 10px;">vue</a> <a href="/tags/windowns/" style="font-size: 10px;">windowns</a> <a href="/tags/windows/" style="font-size: 10px;">windows</a> <a href="/tags/%E9%94%99%E8%AF%AF%E8%AE%B0%E5%BD%95/" style="font-size: 15px;">错误记录</a>
     </div>
   </div>
 
@@ -539,7 +726,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   <div class="widget-wrap">
     <h3 class="widget-title">归档</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">三月 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/09/">九月 2020</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">七月 2019</a></li></ul>
     </div>
   </div>
 
@@ -552,23 +739,23 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
       <ul>
         
           <li>
-            <a href="/2020/09/27/java%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/">(no title)</a>
+            <a href="/2021/03/18/java%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/27/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
+            <a href="/2021/03/18/java%E9%80%9A%E8%BF%87Sigar%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/27/Centos7%E4%B8%8Bdocker%E4%BD%BF%E7%94%A8/">(no title)</a>
+            <a href="/2021/03/18/xml%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/27/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
+            <a href="/2021/03/18/vue%E9%85%8D%E5%90%88ElementUI%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BAexcel%E8%A1%A8%E6%A0%BC/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2020/09/27/JAVA%E9%85%8D%E5%90%88Redis%E5%AE%9E%E7%8E%B0%E5%89%8A%E5%B3%B0/">(no title)</a>
+            <a href="/2021/03/18/JAVA%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">(no title)</a>
           </li>
         
       </ul>
@@ -583,7 +770,7 @@ b) 在父组件中使用自组件的地方监听子组件触发的事件，并�
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2020 VinhoJiang<br>
+      &copy; 2021 VinhoJiang<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
